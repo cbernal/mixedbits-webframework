@@ -128,36 +128,32 @@ class Image private(val image:RenderedImage){
 
     //Handle Fill and Show (Aspect preserving modes)
     if(poMode == ScaleMode.Show || poMode == ScaleMode.Fit){
-//    			//Scale image so entire photo shows
-//    			Image loScaled					= null;
-//    			if(lfRatioX < lfRatioY){
-//    				loScaled					= this.scaledToWidth(piWidth);
-//    				}
-//    			else{
-//    				loScaled					= this.scaledToHeight(piHeight);
-//    				}
-//    
-//    			//Don't pad image to fit desired width and height, just return it as is
-//    			if(poMode == ScaleMode.Fit)
-//    				return loScaled;
-//    
-//    			Point loPosition				= poAlignment.overlayedPosition(new Dimension(piWidth,piHeight),loScaled.GetDimension());
-//    
-//    			//Position image
-//    			return (new Image(piWidth,piHeight)).overlayedImage(loScaled,loPosition.x,loPosition.y);
+      //Scale image so entire photo shows
+      val scaledImage = 
+        if(lfRatioX < lfRatioY)
+          this.scaledToWidth(piWidth)
+        else
+          this.scaledToHeight(piHeight)
+    
+      //Don't pad image to fit desired width and height, just return it as is
+      if(poMode == ScaleMode.Fit)
+        return scaledImage
+
+      val position = poAlignment.overlayedPosition(new Dimension(piWidth,piHeight),scaledImage.dimension())
+
+      //Position image
+      return (new Image(piWidth,piHeight)).overlayImage(scaledImage,position.x,position.y)
     }
     else if(poMode == ScaleMode.Fill){
-//    			//Scale image to fill entire area
-//    			Image loScaled					= null;
-//    			if(lfRatioX > lfRatioY){
-//    				loScaled					= this.scaledToWidth(piWidth);
-//    				}
-//    			else{
-//    				loScaled					= this.scaledToHeight(piHeight);
-//    				}
-//    
-//    			//Position and crop
-//    			return loScaled.croppedImage(piWidth,piHeight,poAlignment);
+      //Scale image to fill entire area
+    	val scaledImage = 
+        if(lfRatioX > lfRatioY)
+        	this.scaledToWidth(piWidth)
+        else
+        	this.scaledToHeight(piHeight)
+        
+      //Position and crop
+      return scaledImage.croppedImage(piWidth,piHeight,poAlignment);
     }
 
     throw new IllegalArgumentException("No valid mode specified!");
