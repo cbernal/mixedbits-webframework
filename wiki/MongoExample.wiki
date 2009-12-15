@@ -30,7 +30,6 @@ object BlogEntry{
 
 object Person{
   object Name extends JsStringProperty
-  object Name extends JsStringProperty
   object Location{
     object Address extends JsStringProperty
     object City extends JsStringProperty
