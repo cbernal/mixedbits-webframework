@@ -102,11 +102,19 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
   def update(i:Int,value:T) = list.put(i,value)
   def add(firstValue:T,values:T*) = {
     this += firstValue
+    
+    addAll(values)
+  }
+  
+  def addAll(values:Seq[T]) = this ++= values
+  
+  def ++= (values:Seq[T]) = {
     for(value <- values)
       this += value
     
     this
   }
+  
   def +=(value:T) =
     if(value.isInstanceOf[JsObject])
       list.add(value.asInstanceOf[JsObject].obj)
@@ -120,4 +128,6 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
 }
 object JsArray{
   def apply[T](firstValue:T,values:T*) = new JsArray[T].add(firstValue,values:_*)
+  
+  def apply[T](values:Seq[T]) = new JsArray[T].addAll(values)
 }
