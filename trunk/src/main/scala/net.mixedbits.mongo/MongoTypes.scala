@@ -45,7 +45,8 @@ class JsObject(baseObject:BasicDBObject){
     this
   }
   
-  override def toString = obj.toString
+  def toJson():String = obj.toString
+  override def toString = toJson
 }
 
 object JsObject{
@@ -125,6 +126,9 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
 
   def -=(value:T){ list.remove(value) }
   def clear = list.clear
+  
+  
+  def toJson():String = list.toString
 }
 object JsArray{
   def apply[T](firstValue:T,values:T*) = new JsArray[T].add(firstValue,values:_*)
