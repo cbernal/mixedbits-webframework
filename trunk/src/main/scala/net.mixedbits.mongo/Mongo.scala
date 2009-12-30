@@ -5,6 +5,8 @@ import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 
+import scala.collection.mutable.ListBuffer
+
 abstract class MongoDatabase(name:String){
   def this() = this(null)
   
@@ -66,7 +68,7 @@ class MongoCollection(database:MongoDatabase, name:String){
           index match {
             
             case Left(property) =>
-              val indexDescription = JsObject(property.fieldName->1).obj
+              val indexDescription = JsObject(property.propertyName->1).obj
               println("Ensuring index: "+indexDescription)
               connection.ensureIndex(indexDescription)
             
@@ -74,7 +76,7 @@ class MongoCollection(database:MongoDatabase, name:String){
             case Right( (indexName, properties) ) =>
               val indexDescription = new BasicDBObject
               for(property <- properties)
-                indexDescription.put(property.fieldName,1)
+                indexDescription.put(property.propertyName,1)
               println("Ensuring index("+indexName+"): "+indexDescription)
               connection.ensureIndex(indexDescription,indexName)
               
@@ -128,12 +130,25 @@ abstract class MongoConstraint{
   def and(constraint:MongoConstraint):MongoConstraintGroup = new MongoConstraintGroup(this,constraint)
   def buildSearchObject:BasicDBObject = applyToSearchObject(new BasicDBObject)
   def applyToSearchObject(obj:BasicDBObject):BasicDBObject
+  override def toString = buildSearchObject.toString
 }
 
-class MongoConstraintGroup(a:MongoConstraint,b:MongoConstraint) extends MongoConstraint{
-  import scala.collection.mutable.ListBuffer
-  protected val constraints = new ListBuffer[MongoConstraint] + a + b
-  override def and(constraint:MongoConstraint):MongoConstraintGroup = {constraints += constraint;this}
+class MongoConstraintGroup extends MongoConstraint{
+  def this(a:MongoConstraint,b:MongoConstraint) = {
+    this()
+    constraints += a
+    constraints += b
+  }
+
+  protected val constraints = new ListBuffer[MongoConstraint]
+  
+  override def and(constraint:MongoConstraint):MongoConstraintGroup =
+    this += constraint
+  
+  def += (constraint:MongoConstraint):MongoConstraintGroup = {
+    constraints += constraint
+    this
+  }
   
   def applyToSearchObject(obj:BasicDBObject):BasicDBObject = {
     for(constraint <- constraints)
