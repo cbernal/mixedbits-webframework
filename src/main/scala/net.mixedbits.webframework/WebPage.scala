@@ -2,26 +2,26 @@ package net.mixedbits.webframework
 
 import scala.xml._
 
+import Tools._
+
 abstract class IncludeFile{
-  def elements:List[Elem]
+  def elements:Elements
 }
 
 case class css(filename:String) extends IncludeFile{
-  def elements = List(
+  def elements = 
     <link rel="stylesheet" type="text/css" href={filename} />
-  )
 }
 
 case class script(filename:String) extends IncludeFile{
-  def elements = List(
+  def elements = 
     <script type="text/javascript" src={filename}></script>
-  )
 }
 
 //documented at http://code.google.com/apis/ajax/documentation/
 case class googleScriptLoader(scripts:(String,String,Option[String])*) extends IncludeFile{
-  def elements = List(
-    <script type="text/javascript" src="http://www.google.com/jsapi"></script>,
+  def elements = 
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
     <script type="text/javascript">
     {
       scripts.map{
@@ -34,52 +34,8 @@ case class googleScriptLoader(scripts:(String,String,Option[String])*) extends I
         
     }
     </script>
-  )
 }
 
-trait TextResponse extends WebResponse{
-  
-  //tuple containing contentType and responseBody
-  def get:(String,String)
-  def post:(String,String)
-  
-  def processRequest{
-    
-    val (contentType,content) = httpRequestMethod match {
-      case "POST" => post
-      case _ => get
-    }
-    
-    WebRequest.httpResponse.setContentType(contentType)
-    WebRequest.httpResponse.getWriter.write(content)
-  }
-  
-}
-
-trait PlainTextResponse extends TextResponse{
-  def content:String
-  def get = "text/plain; charset=UTF-8" -> content
-  def post = get 
-}
-
-trait XmlResponse extends TextResponse{
-  def content:Elem
-  def get = ("text/xml; charset=UTF-8", "<?xml version='1.0' encoding='UTF-8'?>\n"+content.toString)
-  def post = get 
-}
-
-trait CssResponse extends TextResponse{
-  def content:String
-  def get = "text/css; charset=UTF-8" -> content.toString
-  def post = get 
-}
-
-
-trait ScriptResponse extends TextResponse{
-  def script:String
-  def get = "text/javascript" -> script
-  def post = get 
-}
 
 trait WebPage extends TextResponse{
   
@@ -102,15 +58,15 @@ trait WebPage extends TextResponse{
           <title>{title}</title>
           <meta http-equiv="Content-Type" content={contentType} />
           {
-            for(item <- include; element <- item.elements)
-              yield element
+            for(item <- include)
+              yield item.elements
           }
         </head>
         {body}
       </html>
       ,false,false)
   
-  def body:Elem
+  def body:Elements
   
 }
 
