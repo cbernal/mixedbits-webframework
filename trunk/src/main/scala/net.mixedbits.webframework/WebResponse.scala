@@ -2,7 +2,11 @@ package net.mixedbits.webframework
 
 import scala.collection.mutable._
 
+object WebResponseNotFoundException extends Exception
+
 trait WebResponse{
+  
+  def notFound[T]():T = {throw WebResponseNotFoundException}
   
   lazy val registeredPages:List[(String,WebResponse)] = registeredPages(new ListBuffer[(String,WebResponse)],_registeredPages.toList).toList
   
@@ -18,7 +22,7 @@ trait WebResponse{
     _registeredPages ++= pages
   }
   
-  def processRequest:Unit
+  def processRequest():Unit
   
   def httpRequestMethod():String = WebRequest.httpRequest.getMethod
   
