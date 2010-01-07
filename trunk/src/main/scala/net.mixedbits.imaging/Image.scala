@@ -241,24 +241,32 @@ class Image private(val image:RenderedImage){
     return new Image(bufferedImage)
   }
   
-
+  def toRGB():Image = 
+    if(image.getSampleModel.getNumBands == 4)
+      new Image(BandSelectDescriptor.create(image, Array(0,1,2) ,null))
+    else
+      this
+    
+  private val defaultJpegQuality = 0.75f;
   
-  def saveJpeg(destination:File){ saveJpeg(destination,0.75f) }
+  def saveJpeg(destination:File){ saveJpeg(destination,defaultJpegQuality) }
     
   def saveJpeg(destination:File, quality:Int){ saveJpeg(destination,(quality/100.0f)) }
 
   def saveJpeg(destination:File, quality:Float){
+    //Convert ARGB to RGB before saving as jpeg
+    saveAs(toRGB().image,destination,"jpeg",jpegEncoding(quality));
+  }
+  
+  private def jpegEncoding(quality:Int):com.sun.media.jai.codec.JPEGEncodeParam = 
+    jpegEncoding(quality/100.0f)
+  
+  private def jpegEncoding(quality:Float):com.sun.media.jai.codec.JPEGEncodeParam = {
     val encoding = new com.sun.media.jai.codec.JPEGEncodeParam()
     encoding.setQuality(quality)
-    
-    val preparedImage = 
-      if(image.getSampleModel.getNumBands == 4)
-        BandSelectDescriptor.create(image, Array(0,1,2) ,null) //Convert ARGB to RGB before saving as jpeg
-      else
-        image
-    
-    saveAs(preparedImage,destination,"jpeg",encoding);
+    encoding    
   }
+    
 
   def savePng(destination:File){ saveAs(image,destination,"png",null) }
   
@@ -269,8 +277,16 @@ class Image private(val image:RenderedImage){
     
     FileStoreDescriptor.create(image,destination.getAbsolutePath,format,encoding,true,null);
   }
-
-
+  
+  def writePng(outputStream:OutputStream) = writeImage(image,outputStream,"png",null)
+  def writeJpeg(outputStream:OutputStream){ writeJpeg(outputStream,defaultJpegQuality) }
+  def writeJpeg(outputStream:OutputStream,quality:Int){ writeJpeg(outputStream,(quality/100.0f)) }
+  def writeJpeg(outputStream:OutputStream,quality:Float){ writeImage(toRGB.image,outputStream,"jpeg",jpegEncoding(quality)) }
+  
+  def writeImage(image:RenderedImage, outputStream:OutputStream,format:String, encoding:com.sun.media.jai.codec.ImageEncodeParam){
+    com.sun.media.jai.codec.ImageCodec.createImageEncoder(format,outputStream,encoding).encode(image)
+  }
+  
   private def createGaussianKernel(radius:Float):KernelJAI = {
     val diameter:Int = ((2*radius) + 1).toInt
     val invrsq:Float = 1.0f/(radius*radius)
