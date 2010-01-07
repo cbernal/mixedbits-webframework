@@ -4,6 +4,7 @@ import Numbers._
 import Strings._
 import Sequences._
 import Files._
+import BlockStatements._
 
 object Numbers{
   implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)  
@@ -78,10 +79,10 @@ object Files{
 object Objects{
 
   type |[A,B] = Either[A,B]
-  implicit def makeLeft[A,B](a:A):Either[A,B] = Left(a)
-  implicit def makeRight[A,B](b:B):Either[A,B] = Right(b)
+  implicit def toLeft[A,B](a:A):Either[A,B] = Left(a)
+  implicit def toRight[A,B](b:B):Either[A,B] = Right(b)
     
-  implicit def makeOption[T](value:T):Option[T] = 
+  implicit def toOption[T](value:T):Option[T] = 
     if(value == null)
       None                            
     else
@@ -94,7 +95,7 @@ object Objects{
 
 object BlockStatements{
 	def attempt[T](f: =>T):Option[T] = 
-	  try{ Objects.makeOption(f) }
+	  try{ Objects.toOption(f) }
 	  catch{ case _ => None }
 	
 	def default[T](defaultValue:T)(f: =>T):T =
@@ -120,6 +121,16 @@ object BlockStatements{
         println("An error occurred timing a process, elapsed time: "+(duration/1000.0)+" seconds")
       }
     }
+  }
+  
+  def thread(block: =>Any) = {
+    val t = new Thread(new Runnable{
+      def run(){
+        block
+      }
+    })
+    t.start
+    t
   }
   
   def printDuration[T](f: =>T):T = {
@@ -200,3 +211,27 @@ private object MiscTools{
   def randomInt(minValue:Int,maxValue:Int):Int = random.nextInt(maxValue - minValue + 1)+minValue
 }
 
+object IO{
+  import java.io._
+  def pipedInputStream(block:OutputStream=>Any):InputStream = {
+    val input = new PipedInputStream
+    val output = new PipedOutputStream(input)
+    thread{
+      try{
+        block(output)
+      }
+      finally{
+        output.close
+      }
+    }
+    input
+  }
+}
+
+object Passwords{
+  import org.mindrot.bcrypt.BCrypt
+  def hash(password:String):String = BCrypt.hashpw(password,BCrypt.gensalt)
+  //strength is valid from 4 to 31, 31 is strongest, each increment is twice as much work, 10 is the default value
+  def hash(password:String,strength:Int):String = BCrypt.hashpw(password,BCrypt.gensalt(strength))
+  def areEqual(password:String,hash:String):Boolean = BCrypt.checkpw(password,hash)
+}
