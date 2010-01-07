@@ -3,6 +3,7 @@ package net.mixedbits.webframework.sample
 import scala.xml._
 
 import net.mixedbits.webframework._
+import net.mixedbits.webframework.Tools._
 
 object SampleApplication extends WebApplication{
   
@@ -13,6 +14,9 @@ object SampleApplication extends WebApplication{
     "/blog"->BlogPage,
     "/blog/*"->BlogEntryPage
   )
+  
+  val notFoundPage = NotFoundPage
+  
 }
 
 trait DefaultTemplate extends WebPage with WebRequest{
@@ -47,26 +51,34 @@ trait DefaultTemplate extends WebPage with WebRequest{
       <div id="PageWrapper">
         {header}
         <div id="BodyWrapper">
-        {content.child}
+        {content}
         </div>
         {footer}
       </div>
     </body>
     
-  def content:Elem
+  def content:Elements
 }
 
 object HomePage extends DefaultTemplate{
   
   def people = List("Ben","Dan")
   
-  def content = {
-    <page>
+  def content = 
+    <p>
       Welcome to some random website, please search for products!
       { for(name <- people) yield <h3>{name}!!!</h3> }
       { WebRequest.webApplication.registeredPages.map{case(path,_)=>{<p>WebPath({path})</p>}} }
-    </page>
-  }
+    </p>
+}
+
+object NotFoundPage extends DefaultTemplate{
+    
+  def content = 
+    <h2>Not Found (404)</h2>
+    <p>
+      We were unable to find the resource you were looking for.
+    </p>
 }
 
 case class Product(name:String,description:String){
@@ -107,7 +119,7 @@ object ProductPage extends DefaultTemplate{
   override def post = ("text/plain","You searched for: "+param("query",""))
 
   def content = 
-    <page>
+    <div>
       <h2>Search for products</h2>
       <form method="get">
         <input name="show" type="hidden" value="all" />
@@ -135,15 +147,15 @@ object ProductPage extends DefaultTemplate{
           <h2>Please search for a product</h2>
         }
       }
-    </page>
+    </div>
 
 }
 
 object ProductEntryPage extends DefaultTemplate{
   def content = 
-    <page>
+    <div>
     { Products.productTemplate(Products.productById(webpath.wildcards.first)) }
-    </page>
+    </div>
 }
 
 case class BlogEntry(title:String,body:Elem){
@@ -197,16 +209,16 @@ object Blog{
 object BlogPage extends DefaultTemplate{
   override def title = super.title + " :: Blog"
   def content = 
-    <page>
+    <div>
     { for(entry <- Blog.entries) yield Blog.entryTemplate(entry) }
-    </page>
+    </div>
 }
 
 object BlogEntryPage extends DefaultTemplate{
   override def title = super.title + " :: Blog :: "+currentBlogEntry.map(_.title).getOrElse(Blog.noEntryFound)
   def currentBlogEntry = Blog.entryById(webpath.wildcards.first) 
   def content = 
-    <page>
+    <div>
     { Blog.entryTemplate(currentBlogEntry) }
-    </page>
+    </div>
 }
