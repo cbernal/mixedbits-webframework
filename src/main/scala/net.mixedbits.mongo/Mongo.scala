@@ -16,13 +16,26 @@ abstract class MongoDatabase(name:String){
     else
       name
 
-  def getDatabase = getConnection.getDB(databaseName)
+  def getDatabase = connection.getDB(databaseName)
   def withDatabase[T](f: DB=>T):T = f(getDatabase)
   
-  def getConnection:Mongo
+  protected def createConnection:Mongo
+  lazy val connection = createConnection
+  
+  protected def server(host:String) = 
+    new Mongo(new DBAddress(host,"test"))
+  
+  protected def server(host:String,port:Int) = 
+    new Mongo(new DBAddress(host,port,"test"))
+  
+  protected def serverPair(leftHost:String,rightHost:String) = 
+    new Mongo(new DBAddress(leftHost,"test"),new DBAddress(rightHost,"test"))
+  
+  protected def serverPair(leftHost:(String,Int),rightHost:(String,Int)) = 
+    new Mongo(new DBAddress(leftHost._1,leftHost._2,"test"),new DBAddress(rightHost._1,rightHost._2,"test"))
 }
 
-class MongoCollection(database:MongoDatabase, name:String){
+class MongoCollection(val database:MongoDatabase, name:String){
   type IndexLeft = JsProperty[_]
   type IndexRight = (String,List[JsProperty[_]])
   type IndexParam = IndexLeft|IndexRight
@@ -54,10 +67,10 @@ class MongoCollection(database:MongoDatabase, name:String){
   
   
   protected def indexProperties(indicies:IndexLeft*) =
-    index(indicies.map(makeLeft[IndexLeft,IndexRight](_)):_*)
+    index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
   
   protected def indexGroups(indicies:IndexRight*) =
-    index(indicies.map(makeRight[IndexLeft,IndexRight](_)):_*)
+    index(indicies.map(toRight[IndexLeft,IndexRight](_)):_*)
     
   protected def index(indicies:IndexParam*){
     usingWriteConnection{
@@ -91,17 +104,17 @@ class MongoCollection(database:MongoDatabase, name:String){
   
   def count() = usingReadConnection{_.getCount}
   
+  def getAllIds():MongoResultSet =
+    findAll().select(JsAnyProperty("_id"))
+  
   def getIds(constraint:MongoConstraint):MongoResultSet =
-    find(constraint,JsObject("_id"->1))
+    find(constraint).select(JsAnyProperty("_id"))
   
-  def findAll():MongoResultSet = 
-    new MongoResultSet(usingReadConnection{_.find()},database)
-  
-  def find(constraint:MongoConstraint):MongoResultSet = 
-    new MongoResultSet(usingReadConnection{_.find(constraint.buildSearchObject)},database)
-    
-  def find(constraint:MongoConstraint,resultTemplate:JsObject):MongoResultSet = 
-    new MongoResultSet(usingReadConnection{_.find(constraint.buildSearchObject, resultTemplate.obj)},database)
+  def findAll():MongoUpdateableResultSet =
+    new MongoUpdateableResultSet(this,None)
+
+  def find(constraint:MongoConstraint):MongoUpdateableResultSet =
+    new MongoUpdateableResultSet(this,constraint)
     
   def findOne:Option[JsDocument] =
     attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject],database)}
@@ -120,10 +133,79 @@ class MongoCollection(database:MongoDatabase, name:String){
   
   def remove(doc:JsDocument) = removeById(doc.id)
   
-  def save(doc:JsDocument) = usingWriteConnection{_.save(doc.obj)} 
+  //def removeAll(constraint:MongoConstraint)
+  
+  def save(doc:JsDocument) = usingWriteConnection{_.save(doc.obj)}
   
 }
 
+class JsPropertyGroup{
+  
+  def this(a:JsProperty[_]) = {
+    this()
+    this += a
+  }
+  
+  def this(a:JsProperty[_],b:JsProperty[_]) = {
+    this()
+    this += a
+    this += b
+  }
+  
+  protected val _properties = new ListBuffer[JsProperty[_]]
+  def properties = _properties.readOnly
+  
+  def and(property:JsProperty[_]):JsPropertyGroup =
+    this += property
+  
+  def += (property:JsProperty[_]):JsPropertyGroup = {
+    _properties += property
+    this
+  }
+}
+
+abstract class MongoUpdate{
+  def and(update:MongoUpdate):MongoUpdateGroup = new MongoUpdateGroup(this,update)
+  def buildUpdateObject:BasicDBObject = applyToUpdateObject(new BasicDBObject)
+  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject
+  override def toString = buildUpdateObject.toString
+}
+      
+class MongoUpdateGroup extends MongoUpdate{
+  def this(a:MongoUpdate,b:MongoUpdate) = {
+    this()
+    updates += a
+    updates += b
+  }
+  
+  protected val updates = new ListBuffer[MongoUpdate]
+  
+  override def and(update:MongoUpdate):MongoUpdateGroup =
+    this += update
+  
+  def += (update:MongoUpdate):MongoUpdateGroup = {
+    updates += update
+    this
+  }
+  
+  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
+    for(update <- updates)
+      update.applyToUpdateObject(obj)
+    obj
+  }
+}
+
+class MongoPropertyUpdate(key:String,operation:String,value:Any) extends MongoUpdate{
+  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
+    
+    if(obj.containsKey(operation))
+      obj.get(operation).asInstanceOf[BasicDBObject].put(key,value)
+    else
+      obj.put(operation,new BasicDBObject(key,value))
+
+    obj
+  }
+}
 
 
 abstract class MongoConstraint{
@@ -172,21 +254,76 @@ class MongoPropertyConstraint(key:String,operation:String,value:Any) extends Mon
   }
 }
 
-class MongoResultSet(cursor:DBCursor,database:MongoDatabase) extends Iterable[JsDocument]{
-  def size = cursor.count
+class MongoResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends Iterable[JsDocument]{
+
+  private def templateToDBObject = {
+    val result = new BasicDBObject
+    for(template <- resultTemplate)
+      for(property <- template.properties)
+        result.put(property.propertyName,1)
+    result
+  }
+  
+  private lazy val cursor = {
+    collection.usingReadConnection{
+      connection =>
+      
+      var cursor = connection.find(
+                    constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject),
+                    templateToDBObject
+                    )
+      
+      for(value <- numToSkip)
+        cursor = cursor.skip(value)      
+      for(value <- maxResults)
+        cursor = cursor.limit(value)
+      
+      cursor
+    }
+  }
+  
+  def count = size
+  def totalCount = cursor.count
+  def size = {
+    val skip = numToSkip.getOrElse(0)
+    val total = totalCount - skip
+    //if no max results, just return the total, if max results is less than the total, return max results otherwise return the total
+    Math.min(maxResults.getOrElse(total),total)
+  }
+  
   def elements = new Iterator[JsDocument]{
     val cursorIterator = cursor.iterator
-    def next():JsDocument = new JsDocument(cursorIterator.next.asInstanceOf[BasicDBObject],database)
+    def next():JsDocument = new JsDocument(cursorIterator.next.asInstanceOf[BasicDBObject],collection.database)
     def hasNext():Boolean = cursorIterator.hasNext
   }
   
-  def skip(numToSkip:Int) = 
-    new MongoResultSet(cursor.skip(numToSkip),database)
+  def select(newResultTemplate:JsProperty[_]):MongoResultSet =
+    select(new JsPropertyGroup(newResultTemplate))  
+  def select(newResultTemplate:JsPropertyGroup):MongoResultSet =
+    select(toOption(newResultTemplate)) 
+  def select(newResultTemplate:Option[JsPropertyGroup]):MongoResultSet = 
+    new MongoResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults)
   
-  def limit(maxResults:Int) =
-    new MongoResultSet(cursor.limit(maxResults),database)
+  def skip(newSkipCount:Int):MongoResultSet =
+    skip(toOption(newSkipCount))
+  def skip(newSkipCount:Option[Int]):MongoResultSet =
+    new MongoResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults)
+  
+  def limit(newResultsCount:Int):MongoResultSet =
+    limit(toOption(newResultsCount))
+  def limit(newResultsCount:Option[Int]):MongoResultSet =
+    new MongoResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount)
 }
 
+class MongoUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoResultSet(collection,constraint,None,None,None){
+  def update(updates:MongoUpdate) =
+    collection.usingWriteConnection{
+      _.updateMulti(
+        constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject),
+        updates.buildUpdateObject
+      )
+    }
+}
 
 object MongoTools{
   
