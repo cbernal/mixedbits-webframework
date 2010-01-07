@@ -4,7 +4,7 @@ import Numbers._
 import Strings._
 import Objects._
 
-import java.io.{File,FileOutputStream,InputStream,OutputStream,ByteArrayInputStream,ByteArrayOutputStream}
+import java.io._
 import java.net.URLEncoder.encode
 
 import scala.collection.mutable._
@@ -107,6 +107,7 @@ class HttpRequest private[tools](requestMethod:String,url:String){
   //responses
   def text = response.text
   def stream = response.stream
+  def bufferedStream = response.bufferedStream
   def writeTo(output:OutputStream) = response.writeTo(output)
   def writeTo(file:File) = response.writeTo(file)
   
@@ -264,6 +265,8 @@ class HttpResponse private[tools](method:HttpMethod,bufferResponse:Boolean){
     else
       return method.getResponseBodyAsStream();
   }
+  
+  def bufferedStream = new BufferedInputStream(stream)
   
 	def errorStream = method.getResponseBodyAsStream
   def errorText = copyStream(errorStream,new ByteArrayOutputStream,16384).toString(contentEncoding)
