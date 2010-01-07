@@ -9,7 +9,7 @@ object WebRequest{
   val requestContext = new DynamicVariable[(WebApplication,ServletContext,HttpServletRequest,HttpServletResponse,WebPathMatch)](null)
   
   def param(name:String) = 
-    Objects.makeOption(httpRequest.getParameter(name))
+    Objects.toOption(httpRequest.getParameter(name))
 
   def webApplication = requestContext.value._1
   def servletContext = requestContext.value._2
