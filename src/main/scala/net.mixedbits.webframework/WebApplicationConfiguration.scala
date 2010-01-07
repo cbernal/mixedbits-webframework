@@ -98,5 +98,5 @@ class WebApplicationConfiguration(reader:Reader){
   def configUrl = apply("config.url")
   
   def apply[T](property:ConfigurationProperty[T]):T = property(apply(property.name))
-  def apply(property:String):Option[String] = Objects.makeOption(properties.getProperty(property))
+  def apply(property:String):Option[String] = Objects.toOption(properties.getProperty(property))
 }
