@@ -25,9 +25,18 @@ trait WebApplication extends Filter{
       result match{
         case Some(webPathMatch) => {
           WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse,webPathMatch) ){
-            webPage.runActions()
-            webPage.processRequest
-            return
+            try{
+              webPage.runActions()
+              webPage.processRequest()
+              return
+            }
+            catch{
+              case e if e == WebResponseNotFoundException => {
+                notFoundPage.runActions()
+                notFoundPage.processRequest()
+                return
+              }
+            }
           }
         }
         case None => ()
@@ -41,6 +50,8 @@ trait WebApplication extends Filter{
   //tuple of path,page
   val pages:Seq[(String,WebResponse)]
   lazy val registeredPages = Map( (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_* ).map{ case(path,page) => WebPath(path) -> page }.toList
+  
+  val notFoundPage:WebResponse
 }
 
 
