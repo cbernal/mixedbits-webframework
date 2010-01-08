@@ -63,6 +63,20 @@ class MongoCollection(val database:MongoDatabase, name:String){
     }
   }
   
+  def usingWriteConnection[X](f: (DB,DBCollection)=>X):X = database.withDatabase{
+    db=>
+    val originalWriteConcern = db.getWriteConcern 
+    db.requestStart
+    db.setWriteConcern(DB.WriteConcern.STRICT)
+    try{
+      f(db,db.getCollection(collectionName))
+    }
+    finally{
+      db.setWriteConcern(originalWriteConcern)
+      db.requestDone
+    }
+  }
+  
   protected def indexId():Unit = usingWriteConnection{_.ensureIDIndex()}
   
   
@@ -82,7 +96,7 @@ class MongoCollection(val database:MongoDatabase, name:String){
             
             case Left(property) =>
               val indexDescription = JsObject(property.propertyName->1).obj
-              println("Ensuring index: "+indexDescription)
+              //println("Ensuring index: "+indexDescription)
               connection.ensureIndex(indexDescription)
             
             
@@ -90,7 +104,7 @@ class MongoCollection(val database:MongoDatabase, name:String){
               val indexDescription = new BasicDBObject
               for(property <- properties)
                 indexDescription.put(property.propertyName,1)
-              println("Ensuring index("+indexName+"): "+indexDescription)
+              //println("Ensuring index("+indexName+"): "+indexDescription)
               connection.ensureIndex(indexDescription,indexName)
               
           }
@@ -133,199 +147,42 @@ class MongoCollection(val database:MongoDatabase, name:String){
   
   def remove(doc:JsDocument) = removeById(doc.id)
   
-  //def removeAll(constraint:MongoConstraint)
+  def removeAll(constraint:MongoConstraint) = 
+    usingWriteConnection{
+      (db,rawCollection) =>
+      rawCollection.remove(constraint.buildSearchObject)
+      MongoTools.checkBatchDetails(db)
+    }
   
   def save(doc:JsDocument) = usingWriteConnection{_.save(doc.obj)}
   
 }
 
-class JsPropertyGroup{
-  
-  def this(a:JsProperty[_]) = {
-    this()
-    this += a
-  }
-  
-  def this(a:JsProperty[_],b:JsProperty[_]) = {
-    this()
-    this += a
-    this += b
-  }
-  
-  protected val _properties = new ListBuffer[JsProperty[_]]
-  def properties = _properties.readOnly
-  
-  def and(property:JsProperty[_]):JsPropertyGroup =
-    this += property
-  
-  def += (property:JsProperty[_]):JsPropertyGroup = {
-    _properties += property
-    this
-  }
-}
 
-abstract class MongoUpdate{
-  def and(update:MongoUpdate):MongoUpdateGroup = new MongoUpdateGroup(this,update)
-  def buildUpdateObject:BasicDBObject = applyToUpdateObject(new BasicDBObject)
-  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject
-  override def toString = buildUpdateObject.toString
-}
-      
-class MongoUpdateGroup extends MongoUpdate{
-  def this(a:MongoUpdate,b:MongoUpdate) = {
-    this()
-    updates += a
-    updates += b
-  }
-  
-  protected val updates = new ListBuffer[MongoUpdate]
-  
-  override def and(update:MongoUpdate):MongoUpdateGroup =
-    this += update
-  
-  def += (update:MongoUpdate):MongoUpdateGroup = {
-    updates += update
-    this
-  }
-  
-  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
-    for(update <- updates)
-      update.applyToUpdateObject(obj)
-    obj
-  }
-}
-
-class MongoPropertyUpdate(key:String,operation:String,value:Any) extends MongoUpdate{
-  def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
+object Mongo{
+  object Error{
+    object Message extends JsStringProperty("err")
+    object Ok extends JsDoubleProperty("ok")
+    object Namespace extends JsStringProperty("_ns")
     
-    if(obj.containsKey(operation))
-      obj.get(operation).asInstanceOf[BasicDBObject].put(key,value)
-    else
-      obj.put(operation,new BasicDBObject(key,value))
-
-    obj
+    object UpdatedExisting extends JsBooleanProperty("updatedExisting")
+    object DocumentCount extends JsIntProperty("n")
+    object FsyncFilesCount extends JsIntProperty("fsyncFiles")
   }
-}
-
-
-abstract class MongoConstraint{
-  def and(constraint:MongoConstraint):MongoConstraintGroup = new MongoConstraintGroup(this,constraint)
-  def buildSearchObject:BasicDBObject = applyToSearchObject(new BasicDBObject)
-  def applyToSearchObject(obj:BasicDBObject):BasicDBObject
-  override def toString = buildSearchObject.toString
-}
-
-class MongoConstraintGroup extends MongoConstraint{
-  def this(a:MongoConstraint,b:MongoConstraint) = {
-    this()
-    constraints += a
-    constraints += b
-  }
-
-  protected val constraints = new ListBuffer[MongoConstraint]
-  
-  override def and(constraint:MongoConstraint):MongoConstraintGroup =
-    this += constraint
-  
-  def += (constraint:MongoConstraint):MongoConstraintGroup = {
-    constraints += constraint
-    this
-  }
-  
-  def applyToSearchObject(obj:BasicDBObject):BasicDBObject = {
-    for(constraint <- constraints)
-      constraint.applyToSearchObject(obj)
-    obj
-  }
-  
-}
-
-class MongoPropertyConstraint(key:String,operation:String,value:Any) extends MongoConstraint{
-  def applyToSearchObject(obj:BasicDBObject):BasicDBObject = {
-    if(operation == null || operation == "")
-      obj.put(key,value)
-    else{
-      if(obj.containsKey(key))
-        obj.get(key).asInstanceOf[BasicDBObject].put(operation,value)
-      else
-        obj.put(key,new BasicDBObject(operation,value))
-    }
-    obj
-  }
-}
-
-class MongoResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends Iterable[JsDocument]{
-
-  private def templateToDBObject = {
-    val result = new BasicDBObject
-    for(template <- resultTemplate)
-      for(property <- template.properties)
-        result.put(property.propertyName,1)
-    result
-  }
-  
-  private lazy val cursor = {
-    collection.usingReadConnection{
-      connection =>
-      
-      var cursor = connection.find(
-                    constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject),
-                    templateToDBObject
-                    )
-      
-      for(value <- numToSkip)
-        cursor = cursor.skip(value)      
-      for(value <- maxResults)
-        cursor = cursor.limit(value)
-      
-      cursor
-    }
-  }
-  
-  def count = size
-  def totalCount = cursor.count
-  def size = {
-    val skip = numToSkip.getOrElse(0)
-    val total = totalCount - skip
-    //if no max results, just return the total, if max results is less than the total, return max results otherwise return the total
-    Math.min(maxResults.getOrElse(total),total)
-  }
-  
-  def elements = new Iterator[JsDocument]{
-    val cursorIterator = cursor.iterator
-    def next():JsDocument = new JsDocument(cursorIterator.next.asInstanceOf[BasicDBObject],collection.database)
-    def hasNext():Boolean = cursorIterator.hasNext
-  }
-  
-  def select(newResultTemplate:JsProperty[_]):MongoResultSet =
-    select(new JsPropertyGroup(newResultTemplate))  
-  def select(newResultTemplate:JsPropertyGroup):MongoResultSet =
-    select(toOption(newResultTemplate)) 
-  def select(newResultTemplate:Option[JsPropertyGroup]):MongoResultSet = 
-    new MongoResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults)
-  
-  def skip(newSkipCount:Int):MongoResultSet =
-    skip(toOption(newSkipCount))
-  def skip(newSkipCount:Option[Int]):MongoResultSet =
-    new MongoResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults)
-  
-  def limit(newResultsCount:Int):MongoResultSet =
-    limit(toOption(newResultsCount))
-  def limit(newResultsCount:Option[Int]):MongoResultSet =
-    new MongoResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount)
-}
-
-class MongoUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoResultSet(collection,constraint,None,None,None){
-  def update(updates:MongoUpdate) =
-    collection.usingWriteConnection{
-      _.updateMulti(
-        constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject),
-        updates.buildUpdateObject
-      )
-    }
 }
 
 object MongoTools{
+  
+  def lastError(db:DB) = 
+    new JsObject(db.getLastError.asInstanceOf[BasicDBObject])
+  
+  def checkBatchDetails(db:DB):Int = {
+    val details = lastError(db)
+    //do some error checking?
+    
+    //return the document count, or -1 if it wasn't returned
+    details(Mongo.Error.DocumentCount,-1)
+  }
   
   def marshalId(value:String):Object = {
     val objectId = ObjectId.massageToObjectId(value)
@@ -335,7 +192,6 @@ object MongoTools{
       value
   }
   
-//  def marshalDocument(value:DBObject):Option[JsDocument] = marshalDocument(value,null) 
   def marshalDocument(value:DBObject,database:MongoDatabase):Option[JsDocument] = 
     if(value == null)
       None
@@ -360,6 +216,16 @@ object MongoTools{
     }
     currentObject
   }
+  
+  
+  def rawValue(value:Any):Any = 
+    if(value.isInstanceOf[JsObject])
+      value.asInstanceOf[JsObject].obj
+    else if(value.isInstanceOf[JsArray[_]])
+      value.asInstanceOf[JsArray[_]].list
+    else
+      value
+  
 }
 
   /*
