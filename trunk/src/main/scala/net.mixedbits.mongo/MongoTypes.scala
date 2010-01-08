@@ -17,19 +17,20 @@ class JsObject(baseObject:BasicDBObject){
   
   val obj:BasicDBObject = baseObject
   
-  def apply[T](property:JsProperty[T]):Option[T] = property.readValue(obj)
-  def apply[T](property:JsProperty[T],defaultValue:T):T = property.readValue(obj).getOrElse(defaultValue)
-  def update[T](property:JsProperty[T],value:T):this.type = {property.updateValue(obj,value);this}
-  def update[T](propertyName:String,value:T):this.type = {
-    if(value.isInstanceOf[JsObject])
-      obj.put(propertyName,value.asInstanceOf[JsObject].obj)
-    else if(value.isInstanceOf[JsArray[_]])
-      obj.put(propertyName,value.asInstanceOf[JsArray[_]].list)
-    else
-      obj.put(propertyName,value)
+  def apply[T](property:JsProperty[T]):Option[T] =
+    property.readValue(obj)
+  def apply[T](property:JsProperty[T],defaultValue:T):T =
+    property.readValue(obj).getOrElse(defaultValue)
+  
+  def update[T](property:JsProperty[T],value:T):this.type = {
+    property.updateValue(obj,value)
     this
   }
-  
+  def update[T](propertyName:String,value:T):this.type = {
+    obj.put(propertyName,MongoTools.rawValue(value))
+    this
+  }
+
   def apply[T](property:JsArrayProperty[T]):JsArray[T] = {
     property.readUncheckedValue(obj) match {
       case Some(list) => new JsArray[T](list)
