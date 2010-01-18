@@ -70,3 +70,17 @@ trait WebPage extends TextResponse{
   
 }
 
+
+abstract class SimpleRedirect(redirectType: => HttpRedirect,location: => String) extends WebPage{
+  run{
+    val HttpRedirect(code) = redirectType
+    responseCode(code)
+    responseHeader("Location",location)
+  }
+  def title = "Redirecting to "+location+"..."
+  val include = List()
+  
+  def body = 
+    <h1>{title}</h1>
+  //  <a href={location}>{location}</a>
+}

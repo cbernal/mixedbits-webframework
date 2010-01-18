@@ -6,22 +6,25 @@ object WebRequest{
   import javax.servlet.http.{HttpServletRequest,HttpServletResponse}
   import net.mixedbits.tools._
   
-  val requestContext = new DynamicVariable[(WebApplication,ServletContext,HttpServletRequest,HttpServletResponse,WebPathMatch)](null)
+  val requestContext = new DynamicVariable[(WebApplication,ServletContext,HttpServletRequest,HttpServletResponse)](null)
+  val webPath = new DynamicVariable[WebPathMatch](null)
   
   def param(name:String) = 
     Objects.toOption(httpRequest.getParameter(name))
+  
+  def param(name:String,default:String):String = param(name).getOrElse(default)
 
   def webApplication = requestContext.value._1
   def servletContext = requestContext.value._2
   def httpRequest = requestContext.value._3
   def httpResponse = requestContext.value._4
-  def webpath = requestContext.value._5
+  def webpath = webPath.value
 }
 
 
 trait WebRequest{
  
-  def param = WebRequest.param(_)
+  def param(name:String) = WebRequest.param(name)
   def param(name:String,default:String):String = param(name).getOrElse(default)
   def webpath = WebRequest.webpath
   
