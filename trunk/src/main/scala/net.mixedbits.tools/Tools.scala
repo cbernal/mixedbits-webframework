@@ -74,6 +74,26 @@ object Files{
       result = new File(result,part)
     result    
   }
+  
+
+  
+  def tempFolder():File = {
+    val result = new File(System.getProperty("java.io.tmpdir"))
+    result.mkdirs
+    result
+  }
+  
+  def tempFolder(name:String):File = {
+    val result = new File(tempFolder,name)
+    result.mkdirs
+    result
+  }
+}
+
+object Network{
+	def hostname() = 
+    try{ java.net.InetAddress.getLocalHost.getHostName }
+    catch{ case _ => "Unknown" }
 }
 
 object Objects{
@@ -123,16 +143,6 @@ object BlockStatements{
     }
   }
   
-  def thread(block: =>Any) = {
-    val t = new Thread(new Runnable{
-      def run(){
-        block
-      }
-    })
-    t.start
-    t
-  }
-  
   def printDuration[T](f: =>T):T = {
     val start = System.currentTimeMillis
     try{
@@ -143,6 +153,29 @@ object BlockStatements{
       println("Process took "+(duration/1000.0)+" seconds") 
     }
   }
+  
+  
+  def thread(block: =>Any) = {
+    val t = new Thread(new Runnable{
+      def run(){
+        block
+      }
+    })
+    t
+  }
+  
+  def daemonThread(block: =>Any) = {
+    val t = thread{ block }
+    t.setDaemon(true)
+    t
+  }
+
+  def startThread(block: =>Any) = {
+    val t = thread{ block }
+    t.start()
+    t
+  }
+
 }
 
 class StringDateParsingExtensions(value:String){
@@ -216,7 +249,7 @@ object IO{
   def pipedInputStream(block:OutputStream=>Any):InputStream = {
     val input = new PipedInputStream
     val output = new PipedOutputStream(input)
-    thread{
+    startThread{
       try{
         block(output)
       }
@@ -225,6 +258,60 @@ object IO{
       }
     }
     input
+  }
+  
+  def pipeStream(inputStream:InputStream,outputStream:OutputStream,bufferSize:Int){
+		val buffer = new Array[Byte](bufferSize)
+		var readCount = inputStream.read(buffer,0,bufferSize)
+
+		while(readCount != -1){
+      outputStream.write(buffer,0,readCount)
+      readCount = inputStream.read(buffer,0,bufferSize)
+    }
+  }
+  
+  def readAllText(inputStream:InputStream):String = 
+    readAllText(inputStream,"UTF-8")
+  
+  def readAllText(inputStream:InputStream,encoding:String):String = {
+    val outputStream = new ByteArrayOutputStream
+    pipeStream(inputStream,outputStream,1024*16)
+    outputStream.toString(encoding)
+  }
+}
+
+object Hash{
+  import java.io._
+  
+  def md5(string:String):String = 
+    md5(string.getBytes)
+  
+  def md5(bytes:Array[Byte]):String = 
+    md5(new ByteArrayInputStream(bytes))
+  
+	def md5(stream:InputStream):String = {
+	
+		val buffer = new Array[Byte](1024)
+		var readCount = -1
+		val digest = java.security.MessageDigest.getInstance("MD5")
+	
+		do{
+			readCount = stream.read(buffer)
+			if(readCount > 0){
+				digest.update(buffer, 0, readCount)
+      }
+    }
+		while(readCount != -1)
+	
+		getHexString(digest.digest())
+	}
+    
+	private def getHexString(bytes:Array[Byte]):String = {
+		val result = new StringBuilder
+		for(currentByte <- bytes){
+			result.append(Integer.toString( ( currentByte & 0xff ) + 0x100, 16).substring( 1 ))
+    }
+		return result.toString()
   }
 }
 
