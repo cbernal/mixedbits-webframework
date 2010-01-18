@@ -9,6 +9,25 @@ import scala.tools.nsc.util.NameTransformer._
 object Reflection {
   implicit def anyToReflectionMethods(x: Any) = new ReflectionMethods(x)
 }
+
+object Module{
+  import scala.reflect.Manifest
+  
+  def forName[T](name:String)(implicit manifest:Manifest[T]):Option[T] = {
+    try{
+      val moduleClass = Class.forName(name + "$")
+      val moduleInstance = moduleClass.getField("MODULE$").get(null)
+      
+      if(manifest >:> Manifest.classType(moduleClass))
+        Some(moduleInstance.asInstanceOf[T])
+      else
+        None
+    }
+    catch{
+      case _ => None
+    }
+  }
+}
  
 class ReflectionMethods(x: Any) {
   def methods_ = println(methods.reduceLeft[String](_ + ", " + _))
