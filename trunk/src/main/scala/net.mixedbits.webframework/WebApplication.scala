@@ -20,38 +20,55 @@ trait WebApplication extends Filter{
     
     val path = httpRequest.getRequestURI
     
-    for( (webPath,webPage) <- registeredPages ){
-      val result = webPath testPath path
-      result match{
-        case Some(webPathMatch) => {
-          WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse,webPathMatch) ){
-            try{
-              webPage.runActions()
-              webPage.processRequest()
-              return
-            }
-            catch{
-              case e if e == WebResponseNotFoundException => {
-                notFoundPage.runActions()
-                notFoundPage.processRequest()
-                return
+    WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
+      for( (webPath,webPage) <- registeredPages ){
+        val result = webPath testPath path
+        result match{
+          case Some(webPathMatch) => {
+            WebRequest.webPath.withValue(webPathMatch) {
+              try{
+                return showPage(webPage)
+              }
+              catch{
+                case e if e == WebResponseNotFoundException => {
+                  //detect explicit request for not found page
+                  return showNotFound()
+                }
               }
             }
           }
+          case None => ()
         }
-        case None => ()
       }
       
+      
+      //detect lack of file and show custom not found page
+      if(!new java.io.File(httpRequest.getRealPath(path)).exists){
+        WebRequest.webPath.withValue(WebPathMatch(path,path)) {
+          return showNotFound()
+        }
+      }
+      
+
     }
     
     chain.doFilter(request, response)
   }
   
-  //tuple of path,page
-  val pages:Seq[(String,WebResponse)]
-  lazy val registeredPages = Map( (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_* ).map{ case(path,page) => WebPath(path) -> page }.toList
+  private def showPage(page:WebResponse){
+    page.runActions()
+    page.processRequest()
+  }
+  private def showNotFound() = showPage(notFoundPage)
   
+
+  lazy val registeredPages = Map( (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_* ).map{ case(path,page) => WebPath(path) -> page }.toList
+
+
+  //tuple of path,page
+  val pages:Seq[(String,WebResponse)]  
   val notFoundPage:WebResponse
+
 }
 
 

@@ -4,6 +4,10 @@ import scala.collection.mutable._
 
 object WebResponseNotFoundException extends Exception
 
+object WebResponse{
+  def notFound[T]():T = {throw WebResponseNotFoundException}
+}
+
 trait WebResponse{
   
   def notFound[T]():T = {throw WebResponseNotFoundException}
@@ -29,6 +33,11 @@ trait WebResponse{
   def isHttpPost():Boolean = httpRequestMethod equalsIgnoreCase "POST"
   def isHttpGet():Boolean = httpRequestMethod equalsIgnoreCase "GET"
   
+  def responseCode(code:Int) = 
+    WebRequest.httpResponse.setStatus(code)
+  
+  def responseHeader(name:String,value:String) = 
+    WebRequest.httpResponse.setHeader(name,value)
   
   private val _registeredActions = new ListBuffer[()=>Any]()
   protected def run[T](action: =>T){ _registeredActions += action _ }
