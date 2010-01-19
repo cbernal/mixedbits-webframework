@@ -6,7 +6,7 @@ import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 import com.mongodb.util._
 
-class JsObject(baseObject:BasicDBObject){
+class JsObject(baseObject:DBObject){
   def this() = this(new BasicDBObject)
   def add(firstValue:(String,Any),values:(String,Any)*) = {
     update(firstValue._1,firstValue._2)
@@ -15,7 +15,12 @@ class JsObject(baseObject:BasicDBObject){
     this
   }
   
-  val obj:BasicDBObject = baseObject
+  val obj:DBObject = baseObject
+  
+  def apply(updates:MongoUpdate):this.type = {
+    updates.applyToObject(this)
+    this
+  }
   
   def apply[T](property:JsProperty[T]):Option[T] =
     property.readValue(obj)
@@ -51,13 +56,16 @@ class JsObject(baseObject:BasicDBObject){
 }
 
 object JsObject{
+  def apply(updates:MongoUpdate):JsObject = 
+    updates.applyToObject(new JsObject)
+  
   def apply() = new JsObject
   def apply(firstValue:(String,Any),values:(String,Any)*) = new JsObject().add(firstValue,values:_*)
   
   def parse(data:String) = new JsObject(JSON.parse(data).asInstanceOf[BasicDBObject])
 }
 
-class JsDocument(baseObject:BasicDBObject,val database:MongoDatabase) extends JsObject(baseObject){
+class JsDocument(baseObject:DBObject,val database:MongoDatabase) extends JsObject(baseObject){
   
   def this() = this(new BasicDBObject,null)
   //def this(baseObject:BasicDBObject) = this(baseObject,null)
@@ -66,10 +74,21 @@ class JsDocument(baseObject:BasicDBObject,val database:MongoDatabase) extends Js
     this.id = id
   }
   
-  def id:String = obj.getString("_id")
+  def id:String = obj.get("_id").toString
   def id_=(value:String) = obj.put("_id",MongoTools.marshalId(value))
   
-  def collection:String = obj.getString("_ns")
+  def collection:String = obj.get("_ns").toString
+}
+
+object JsDocument{
+  def apply(updates:MongoUpdate):JsDocument ={
+    val doc = new JsDocument
+    updates.applyToObject(doc)
+    doc
+  }
+  
+  object Id extends JsAnyProperty("_id")
+  object Namespace extends JsAnyProperty("_ns")
 }
 
 class JsDbRef(database:MongoDatabase,baseRef:DBRef){

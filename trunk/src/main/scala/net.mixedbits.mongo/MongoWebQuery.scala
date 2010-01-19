@@ -82,6 +82,7 @@ trait MongoWebQuery{
       case "ne" => property != value
     }
 
+    /*
   def searchForIds(parameters:java.util.Map[String,Array[String]]) =
     for(constraint <- buildSearchConstraint(parameters))
       yield getIds(constraint)  
@@ -89,6 +90,16 @@ trait MongoWebQuery{
   def search(parameters:java.util.Map[String,Array[String]]) =
     for(constraint <- buildSearchConstraint(parameters))
       yield find(constraint)
+    */
+    
+  def search(parameters:java.util.Map[String,Array[String]]) = {
+    val criteria = collectParameters(parameters)
+    buildSearchConstraint(criteria).map{
+      constraint =>
+      val results = find(constraint)
+      (criteria,results,results.size) 
+    }
+  }
   
   
   private var _paramKey:String = _

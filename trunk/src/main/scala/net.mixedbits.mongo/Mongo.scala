@@ -35,129 +35,6 @@ abstract class MongoDatabase(name:String){
     new Mongo(new DBAddress(leftHost._1,leftHost._2,"test"),new DBAddress(rightHost._1,rightHost._2,"test"))
 }
 
-class MongoCollection(val database:MongoDatabase, name:String){
-  type IndexLeft = JsProperty[_]
-  type IndexRight = (String,List[JsProperty[_]])
-  type IndexParam = IndexLeft|IndexRight
-  
-  def this(database:MongoDatabase) = this(database,null)
-  
-  val collectionName:String =
-    if(name == null)
-      Objects.simpleClassName(this)
-    else
-      name
-    
-  def usingReadConnection[X](f: DBCollection=>X):X = database.withDatabase(db=>f(db.getCollection(collectionName)))
-  def usingWriteConnection[X](f: DBCollection=>X):X = database.withDatabase{
-    db=>
-    val originalWriteConcern = db.getWriteConcern 
-    db.requestStart
-    db.setWriteConcern(DB.WriteConcern.STRICT)
-    try{
-      f(db.getCollection(collectionName))
-    }
-    finally{
-      db.setWriteConcern(originalWriteConcern)
-      db.requestDone
-    }
-  }
-  
-  def usingWriteConnection[X](f: (DB,DBCollection)=>X):X = database.withDatabase{
-    db=>
-    val originalWriteConcern = db.getWriteConcern 
-    db.requestStart
-    db.setWriteConcern(DB.WriteConcern.STRICT)
-    try{
-      f(db,db.getCollection(collectionName))
-    }
-    finally{
-      db.setWriteConcern(originalWriteConcern)
-      db.requestDone
-    }
-  }
-  
-  protected def indexId():Unit = usingWriteConnection{_.ensureIDIndex()}
-  
-  
-  protected def indexProperties(indicies:IndexLeft*) =
-    index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
-  
-  protected def indexGroups(indicies:IndexRight*) =
-    index(indicies.map(toRight[IndexLeft,IndexRight](_)):_*)
-    
-  protected def index(indicies:IndexParam*){
-    usingWriteConnection{
-      connection=>
-      
-      try{
-        for(index <- indicies){
-          index match {
-            
-            case Left(property) =>
-              val indexDescription = JsObject(property.propertyName->1).obj
-              //println("Ensuring index: "+indexDescription)
-              connection.ensureIndex(indexDescription)
-            
-            
-            case Right( (indexName, properties) ) =>
-              val indexDescription = new BasicDBObject
-              for(property <- properties)
-                indexDescription.put(property.propertyName,1)
-              //println("Ensuring index("+indexName+"): "+indexDescription)
-              connection.ensureIndex(indexDescription,indexName)
-              
-          }
-        }
-      }
-      catch{
-        case e => e.printStackTrace()
-      }
-    }
-  }
-  
-  def count() = usingReadConnection{_.getCount}
-  
-  def getAllIds():MongoResultSet =
-    findAll().select(JsAnyProperty("_id"))
-  
-  def getIds(constraint:MongoConstraint):MongoResultSet =
-    find(constraint).select(JsAnyProperty("_id"))
-  
-  def findAll():MongoUpdateableResultSet =
-    new MongoUpdateableResultSet(this,None)
-
-  def find(constraint:MongoConstraint):MongoUpdateableResultSet =
-    new MongoUpdateableResultSet(this,constraint)
-    
-  def findOne:Option[JsDocument] =
-    attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject],database)}
-    
-  def findOne(constraint:MongoConstraint):Option[JsDocument] =
-    usingReadConnection{
-      collection=> MongoTools.marshalDocument(collection.findOne(constraint.buildSearchObject),database)
-    }
-    
-  def getById(id:String):Option[JsDocument] =
-    usingReadConnection{
-      collection=> MongoTools.marshalDocument(collection.findOne(new JsDocument(id).obj),database)
-    }
-
-  def removeById(id:String) = {usingWriteConnection{_.remove(new JsDocument(id).obj)}}
-  
-  def remove(doc:JsDocument) = removeById(doc.id)
-  
-  def removeAll(constraint:MongoConstraint) = 
-    usingWriteConnection{
-      (db,rawCollection) =>
-      rawCollection.remove(constraint.buildSearchObject)
-      MongoTools.checkBatchDetails(db)
-    }
-  
-  def save(doc:JsDocument) = usingWriteConnection{_.save(doc.obj)}
-  
-}
-
 
 object Mongo{
   object Error{
@@ -184,6 +61,9 @@ object MongoTools{
     details(Mongo.Error.DocumentCount,-1)
   }
   
+  def generateId():String =
+    new com.mongodb.ObjectId().toString()
+  
   def marshalId(value:String):Object = {
     val objectId = ObjectId.massageToObjectId(value)
     if(objectId!=null)
@@ -196,14 +76,17 @@ object MongoTools{
     if(value == null)
       None
     else
-      Some(new JsDocument(value.asInstanceOf[BasicDBObject],database))
+      Some(new JsDocument(value.asInstanceOf[DBObject],database))
 
     
-  def resolveObject(start:BasicDBObject,create:Boolean,fieldPath:Array[String]):BasicDBObject = {
+  def resolveObject(start:DBObject,create:Boolean,fieldPath:Array[String]):DBObject = {
     var currentObject = start
     for(field <- fieldPath){
-      if(currentObject.containsField(field)){
-        currentObject = currentObject.get(field).asInstanceOf[BasicDBObject]
+      if(currentObject == null){
+        return null
+      }
+      else if(currentObject.containsField(field)){
+        currentObject = currentObject.get(field).asInstanceOf[DBObject]
       }
       else if(create){
         val newObject = new BasicDBObject

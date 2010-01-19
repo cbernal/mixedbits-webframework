@@ -8,15 +8,15 @@ import com.mongodb._
 
 trait JsProperty[T]{
   //data reading / writing
-  def resolveObject(start:BasicDBObject,create:Boolean):BasicDBObject =
+  def resolveObject(start:DBObject,create:Boolean):DBObject =
     MongoTools.resolveObject(start,create,propertyPath)
   
-  def putUncheckedValue[X](start:BasicDBObject,value:X):X = {
+  def putUncheckedValue[X](start:DBObject,value:X):X = {
     resolveObject(start,true).put(shortName,MongoTools.rawValue(value))
     value
   }
   
-  def readUncheckedValue[X](start:BasicDBObject):Option[X] = {
+  def readUncheckedValue[X](start:DBObject):Option[X] = {
     val currentObject = resolveObject(start,false)
     if(currentObject == null || !currentObject.containsField(shortName))
       None
@@ -24,10 +24,10 @@ trait JsProperty[T]{
       toOption(currentObject.get(shortName).asInstanceOf[X])
   }
   
-  def updateValue(start:BasicDBObject,value:T):T = 
+  def updateValue(start:DBObject,value:T):T = 
     putUncheckedValue(start,value)
   
-  def readValue(start:BasicDBObject):Option[T] = 
+  def readValue(start:DBObject):Option[T] = 
     readUncheckedValue(start)
   
   //property name / parts
@@ -48,6 +48,8 @@ trait JsProperty[T]{
   //property groups
   def and(property:JsProperty[_]) = 
     new JsPropertyGroup(this,property)
+  def &&(property:JsProperty[_]) = 
+    new JsPropertyGroup(this,property)
   
   //query operators
   def equals(value:T):MongoConstraint = this == value // this "operator" helps to remove compiler warnings about all of the ==, >=, <= operators
@@ -58,68 +60,118 @@ trait JsProperty[T]{
   
   //update operators
   def <~ (value:T):MongoUpdate = 
-    new MongoPropertyUpdate(this.propertyName,"$set",value)
+    new MongoPropertyUpdate(this.propertyName,"$set",value,(obj=> obj(this) = value))
   
   def <~ (value:Option[T]):MongoUpdate = value match {
-    case Some(v) => new MongoPropertyUpdate(this.propertyName,"$set",v)
-    case None => new MongoPropertyUpdate(this.propertyName,"$set",null)//new MongoPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
+    case Some(v) => new MongoPropertyUpdate(this.propertyName,"$set",v,(obj=> obj(this) = v))
+    case None => new MongoPropertyUpdate(this.propertyName,"$set",null,(obj=> error("not supported!")))//new MongoPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
   }
+  
+  override def toString() = "JsProperty("+propertyName+")"
 
 }
 
 class JsSelectableProperty extends JsProperty[Nothing]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 class JsAnyProperty extends JsProperty[Any]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 class JsObjectProperty extends JsProperty[JsObject]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   override def ==(value:JsArray[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"",value.list)
   override def !=(value:JsArray[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"$ne",value.list)
   
-  def +=(value:T):MongoUpdate = new MongoPropertyUpdate(propertyName,"$push",value)
-  def ++=(value:Seq[T]):MongoUpdate = new MongoPropertyUpdate(propertyName,"$pushAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value))
+  def +(value:T):MongoUpdate = this += value
+  def ++(value:Seq[T]):MongoUpdate = this ++= value
+  
+  def -(value:T):MongoUpdate = this -= value
+  def --(value:Seq[T]):MongoUpdate = this ++= value
+  
+  def +=(value:T):MongoUpdate =
+    new MongoPropertyUpdate(
+      propertyName,"$push",value,
+      (obj=> obj(this) += value)
+      )
+  def ++=(value:Seq[T]):MongoUpdate =
+    new MongoPropertyUpdate(
+      propertyName,"$pushAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value),
+      (obj=> obj(this) ++= value)
+      )
     
-  def -=(value:T):MongoUpdate = new MongoPropertyUpdate(propertyName,"$pull",value)
-  def --=(value:Seq[T]):MongoUpdate = new MongoPropertyUpdate(propertyName,"$pullAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value))
+  def -=(value:T):MongoUpdate =
+    new MongoPropertyUpdate(
+      propertyName,"$pull",value,
+      (obj=> obj(this) -= value)
+      )
+  def --=(value:Seq[T]):MongoUpdate =
+    new MongoPropertyUpdate(
+      propertyName,"$pullAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value),
+      (obj=> error("not supported!"))
+      )
 }
 
 class JsStringProperty extends JsProperty[String]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 class JsBooleanProperty extends JsProperty[Boolean]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 abstract class JsOrderedProperty[T] extends JsProperty[T]{
   def >(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$gt",value)
   def >=(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$gte",value)
   def <(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$lt",value)
-  def <=(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$lte",value)  
+  def <=(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$lte",value)
 }
 
 abstract class JsNumberProperty[T <: AnyVal] extends JsOrderedProperty[T]{
-  def +=(value:T):MongoUpdate = new MongoPropertyUpdate(propertyName,"$inc",value)
-  //def -=(value:T):MongoUpdate = new MongoPropertyUpdate(propertyName,"$inc",-value)
+  def +(value:T):MongoUpdate = this += value
+  def -(value:T):MongoUpdate = this -= value
+  def +=(value:T):MongoUpdate
+  def -=(value:T):MongoUpdate
 }
 
 class JsIntProperty extends JsNumberProperty[Int]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
+  def +=(value:Int):MongoUpdate =
+    new MongoPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
+  def -=(value:Int):MongoUpdate = 
+    new MongoPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
 }
 class JsDoubleProperty extends JsNumberProperty[Double]{
   def this(name:String) = {this();propertyName(name)}
+  def +=(value:Double):MongoUpdate =
+    new MongoPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
+  def -=(value:Double):MongoUpdate = 
+    new MongoPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
 }
 
 class JsDateProperty extends JsOrderedProperty[Date]{
   def this(name:String) = {this();propertyName(name)}
+  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
+  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
 }
 
 //simple runtime definition of properties
