@@ -11,6 +11,8 @@ class XmlStream{
 
   import scala.collection.mutable._   
   
+  case class Collector(onCollected: () => Any)
+  
   //the sax parser we use depends on the name resolution we are using...
   private lazy val saxParser =
     if(_nameResolver == null)
@@ -40,7 +42,10 @@ class XmlStream{
   //current context
   def select(matcher: PartialFunction[(String,Attributes),Any]) = contextStart(new SelectContext(matcher,null))
   def read(matcher: PartialFunction[(String,Attributes),String=>Any]) = contextStart(new TextContext(matcher,null))
-  def collect[T](collector:T=>Unit)(matcher:PartialFunction[(String,Attributes),T]) = contextStart(new CollectingContext(matcher,null,collector))
+  def collect(matcher:PartialFunction[(String,Attributes),Collector]) = contextStart(new CollectingContext(matcher,null))
+  
+  
+  def onDataCollected(onCollected: => Any) = Collector(onCollected _)
   
   private def contextStart(context:Context){
     currentContext = context
@@ -94,8 +99,11 @@ class XmlStream{
     var buffer:StringBuilder = null
     
     def onComplete(value: =>String) =
-      if(matcherResult!=null)
+      if(matcherResult!=null){
         matcherResult.asInstanceOf[String=>Any].apply(value)
+        //make sure this is nulled out, otherwise the last element will be processed twice...
+        matcherResult = null
+      }
 
     override def startElement(name:String,attributes:Attributes) = {
       buffer = new StringBuilder
@@ -106,13 +114,20 @@ class XmlStream{
       onComplete(buffer.toString)
       super.endElement
     }
-    override def collect(chars:Array[Char],start:Int,length:Int) = buffer.append(chars,start,length)
+    override def collect(chars:Array[Char],start:Int,length:Int){
+      if(buffer!=null)
+        buffer.append(chars,start,length)
+    }
   }
   
-  private class CollectingContext[T](matcher:PartialFunction[(String,Attributes),T],name:String,collector:T=>Unit) extends SelectContext(matcher,name){
+  private class CollectingContext(matcher:PartialFunction[(String,Attributes),Collector],name:String) extends SelectContext(matcher,name){
     override def endElement = {
-      if(matcherResult!=null)
-        collector(matcherResult.asInstanceOf[T])
+      if(matcherResult!=null){
+        matcherResult.asInstanceOf[Collector].onCollected()
+        //make sure this is nulled out, otherwise the last element will be processed twice...
+        matcherResult = null
+      }
+        
       super.endElement
     }
   }
