@@ -9,6 +9,7 @@ import scala.collection.mutable.ListBuffer
 
 
 abstract class MongoConstraint{
+  def &&(constraint:MongoConstraint) = this and constraint
   def and(constraint:MongoConstraint):MongoConstraintGroup = new MongoConstraintGroup(this,constraint)
   def buildSearchObject:BasicDBObject = applyToSearchObject(new BasicDBObject)
   def applyToSearchObject(obj:BasicDBObject):BasicDBObject
