@@ -30,6 +30,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   protected val onStart = new SimpleEvent
   protected val onStop = new SimpleEvent
   protected val onIdle = new SimpleEvent
+  protected val onItemMissed = new SimpleEvent
   protected val onBeforeItem = new Event[T]
   protected val onAfterItem = new Event[T]
   
@@ -84,14 +85,13 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
           onAfterItem(item)
           if(enabled)
             Thread.sleep(queuePauseDuration.millis)
-        case ItemMissed =>
-          if(enabled)
-            Thread.sleep(queuePauseDuration.millis)
         case NoItemFound =>
           if(enabled){
             onIdle()
             Thread.sleep(queueIdleDuration.millis)
           }
+        case ItemMissed =>
+          onItemMissed()
       }
     }
     
@@ -103,7 +103,8 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   }
   
   private def nextItem():NextItemResult = {
-    //somehow deal with items that have been started but not completed within the alotted time
+    // TODO: somehow deal with items that have been started but not completed within the alotted time
+    //       maybe by searching for claimed items, that have a started time over a certain age
     
     //claim items and ensure that they were properly claimed here
     collection.findOne(ClaimedBy == null and ScheduledTime <= new Date()) match {
@@ -128,7 +129,6 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
       case None =>
         NoItemFound
     }
-    //error("not implemented")
   }
   
   private def processItem(item:T){
@@ -138,6 +138,8 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
     }
     catch{
       case e =>
+        // TODO: probably re-enqueue for immediate processing and increment some retry counter
+        // TODO: maybe email if retry counter exceeds some limit
         println("error processing item")
         e.printStackTrace()
     }
@@ -157,11 +159,14 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
           //make sure we have an id, make sure we claimed the item, and then mark it as processed and apply the users requested changes
           for(itemId <- item(JsDocument.Id))
             collection.find(JsDocument.Id == itemId and ClaimedBy == serverName)
-                      .updateFirst(ScheduledTime <~ None and ClaimedBy <~ None and LastFinished <~ new Date() and TimesProcessed + 1 and newValues and newProcessTime)  
+                      .updateFirst(ScheduledTime <~ None and ClaimedBy <~ None and LastFinished <~ new Date() and TimesProcessed + 1 and newValues and newProcessTime)
+                      
+          // TODO: we should check that the update actually occurred incase there wasn't an error, but the criteria wasn't able to match the item
       }
     }
     catch{
       case e =>
+        // TODO: maybe retry a couple of times, then send notification
         println("error dealing with item results")
         e.printStackTrace()
     }
@@ -180,7 +185,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   def enqueue():MongoUpdate = 
     enqueue(DateTime.now)
   def enqueue(processTime:DateTime):MongoUpdate = 
-    ScheduledTime <~ processTime.toDate and queue.UniqueId <~ MongoTools.generateId
+    ScheduledTime <~ processTime.toDate and queue.UniqueId <~ MongoTools.generateId and ClaimedBy <~ None
   
   def onItemSelected(item:T):MongoQueueResult
   
@@ -189,6 +194,9 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   
   //how long to wait after completing an item before continuing to the next, in millis
   def queuePauseDuration:Duration
+  
+  //how long to wait before stealing a claimed item from another server
+  def queueClaimTimeout:Duration
   
   //this will be used to identify who claimed the item
   val serverName:String = Network.hostname
