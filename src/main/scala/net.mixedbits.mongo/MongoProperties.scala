@@ -24,6 +24,10 @@ trait JsProperty[T]{
       toOption(currentObject.get(shortName).asInstanceOf[X])
   }
   
+  def removeValue(obj:DBObject){
+    toOption(resolveObject(obj,false)).map(_.removeField(shortName))
+  }
+  
   def updateValue(start:DBObject,value:T):T = 
     putUncheckedValue(start,value)
   
@@ -64,7 +68,7 @@ trait JsProperty[T]{
   
   def <~ (value:Option[T]):MongoUpdate = value match {
     case Some(v) => new MongoPropertyUpdate(this.propertyName,"$set",v,(obj=> obj(this) = v))
-    case None => new MongoPropertyUpdate(this.propertyName,"$set",null,(obj=> error("not supported!")))//new MongoPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
+    case None => new MongoPropertyUpdate(this.propertyName,"$set",null,(obj=> obj(this) = None))//new MongoPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
   }
   
   override def toString() = "JsProperty("+propertyName+")"
@@ -121,7 +125,7 @@ class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
   def --=(value:Seq[T]):MongoUpdate =
     new MongoPropertyUpdate(
       propertyName,"$pullAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value),
-      (obj=> error("not supported!"))
+      (obj=> obj(this) --= value)
       )
 }
 

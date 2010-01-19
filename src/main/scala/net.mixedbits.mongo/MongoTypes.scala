@@ -31,6 +31,13 @@ class JsObject(baseObject:DBObject){
     property.updateValue(obj,value)
     this
   }
+  def update[T](property:JsProperty[T],value:Option[T]):this.type = {
+    value match {
+      case Some(v) => update(property,v)
+      case None => property.removeValue(obj)
+    }
+    this
+  }
   def update[T](propertyName:String,value:T):this.type = {
     obj.put(propertyName,MongoTools.rawValue(value))
     this
@@ -136,6 +143,13 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
     this
   }
   
+  def --= (values:Seq[T]) = {
+    for(value <- values)
+      this -= value
+    
+    this
+  }
+  
   def +=(value:T) =
     if(value.isInstanceOf[JsObject])
       list.add(value.asInstanceOf[JsObject].obj)
@@ -144,9 +158,9 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
     else
       list.add(value.asInstanceOf[AnyRef])
 
-  def -=(value:T){ list.remove(value) }
-  def clear = list.clear
+  def -=(value:T){ while(list contains value){list.remove(value)} }
   
+  def clear = list.clear
   
   def toJson():String = list.toString
 }
