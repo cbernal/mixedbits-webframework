@@ -171,4 +171,8 @@ object XmlStream{
   def apply(input:InputStream)(f:(XmlStream)=>Unit) { createParser(f).parse(input) }
   def apply(file:File)(f:(XmlStream)=>Unit) { createParser(f).parse(file) }
   
+  
+  def testParse(file:File){
+    XmlStream(file){data => data.select {case _ => ()}} 
+  }
 }
