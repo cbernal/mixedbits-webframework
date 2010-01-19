@@ -76,6 +76,8 @@ class Image private(val image:RenderedImage){
   def height() = image.getHeight
 
   def dimension() = new Dimension(this.width,this.height)
+  
+  def resolution() = (width,height)
 
 
   def scaledToWidth(piWidth:Int):Image = {
