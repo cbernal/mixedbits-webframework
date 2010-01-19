@@ -122,9 +122,7 @@ object BlockStatements{
     attempt(f) match {
       case Some(value) => value
       case None => defaultValue
-    }
-    
-    
+    }    
 
   def time[T](f: =>T):(Long,T) = {
     val start = System.currentTimeMillis
@@ -245,13 +243,15 @@ private object MiscTools{
 }
 
 object IO{
+  
   import java.io._
-  def pipedInputStream(block:OutputStream=>Any):InputStream = {
+  
+  def toInputStream(func:OutputStream=>Any):InputStream = {
     val input = new PipedInputStream
     val output = new PipedOutputStream(input)
     startThread{
       try{
-        block(output)
+        func(output)
       }
       finally{
         output.close
