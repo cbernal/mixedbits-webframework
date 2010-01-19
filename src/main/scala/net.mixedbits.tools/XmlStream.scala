@@ -5,11 +5,14 @@ import java.io._
 import org.xml.sax._
 import org.xml.sax.helpers._
 import javax.xml.parsers._
-
+import Objects._
 
 class XmlStream{
 
   import scala.collection.mutable._   
+  
+
+  private object XmlStreamParserStopException extends Exception
   
   case class Collector(onCollected: () => Any)
   
@@ -26,9 +29,21 @@ class XmlStream{
   def parse(element:Elem) { parse(element.toString) }
   def parse(value:String) { parse(value,"UTF-8") }
   def parse(value:String,encoding:String) { parse(new ByteArrayInputStream(value.getBytes(encoding))) }
-  def parse(input:InputStream) { saxParser.parse(input,SaxHandler) }
-  def parse(file:File) { saxParser.parse(file,SaxHandler) }
+  def parse(input:InputStream) { ignoreParserStop{ saxParser.parse(input,SaxHandler) } }
+  def parse(file:File) { ignoreParserStop{ saxParser.parse(file,SaxHandler) } }
   
+  private def ignoreParserStop(block: =>Any){
+    try{ block }
+    catch{
+      case e => 
+        toOption(e.getCause) match {
+          case Some(cause) if cause == XmlStreamParserStopException =>
+            ()
+          case _ =>
+            throw e
+        }
+    }
+  }  
   
   //name resolution
   var _nameResolver: (String,String,String)=>String = null
@@ -44,8 +59,9 @@ class XmlStream{
   def read(matcher: PartialFunction[(String,Attributes),String=>Any]) = contextStart(new TextContext(matcher,null))
   def collect(matcher:PartialFunction[(String,Attributes),Collector]) = contextStart(new CollectingContext(matcher,null))
   
-  
+  //helper methods
   def onDataCollected(onCollected: => Any) = Collector(onCollected _)
+  def stopParsing[T]():T = { throw XmlStreamParserStopException }
   
   private def contextStart(context:Context){
     currentContext = context
@@ -132,7 +148,7 @@ class XmlStream{
     }
   }
     
-  object SaxHandler extends DefaultHandler{
+  private object SaxHandler extends DefaultHandler{
     override def startElement(uri:String,localName:String,qName:String,attributes:Attributes) = 
       currentContext.startElement(resolveNames(uri,localName,qName),attributes)
     
