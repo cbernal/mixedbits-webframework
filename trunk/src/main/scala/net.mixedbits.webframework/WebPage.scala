@@ -18,6 +18,11 @@ case class script(filename:String) extends IncludeFile{
     <script type="text/javascript" src={filename}></script>
 }
 
+case class rss(filename:String) extends IncludeFile{
+  def elements = 
+    <link rel="alternate" type="application/rss+xml" title="RSS" href={filename} />
+}
+
 //documented at http://code.google.com/apis/ajax/documentation/
 case class googleScriptLoader(scripts:(String,String,Option[String])*) extends IncludeFile{
   def elements = 
