@@ -18,6 +18,17 @@ object Sequences{
   implicit def sequenceExtensions[T](value:Seq[T]) = new SequenceExtensions(value)
   
   def sort[T](list:Array[T])(compareFunction:(T,T) => Boolean):Array[T] = scala.util.Sorting.stableSort(list,compareFunction)
+  
+  def randomSet(count:Int,min:Int,max:Int):List[Int] = {
+    val resultsCount = Math.min(count,Math.abs(max-min))
+    val results = new scala.collection.mutable.ListBuffer[Int]
+    while(results.size < resultsCount){
+      val newValue = MiscTools.randomInt(min,max)
+      if(!results.contains(newValue))
+        results += newValue 
+    }
+    results.toList
+  }
 }
 
 object Dates{
@@ -88,12 +99,41 @@ object Files{
     result.mkdirs
     result
   }
+  
+  def findAll(dir:File,predicate:File=>Boolean):List[File] = {
+    val (allFiles,dirs) = List(dir.listFiles:_*).partition(_.isFile)
+    List.flatten(for(subdir <- dirs) yield findAll(subdir,predicate)) ::: (allFiles.filter(predicate)) ::: Nil
+  }
+  
+  def findAll(dirs:Seq[File],predicate:File=>Boolean):List[File] = 
+    List.flatten(for(dir <- dirs.toList) yield findAll(dir,predicate))
+  
+  def findAll(dir:File,extension:String):List[File] = 
+    findAll(dir,{f:File => f.getName endsWith extension})
+
+  def findAll(dirs:Seq[File],extension:String):List[File] = 
+    findAll(dirs,{f:File => f.getName endsWith extension})
+  
 }
 
 object Network{
 	def hostname() = 
     try{ java.net.InetAddress.getLocalHost.getHostName }
     catch{ case _ => "Unknown" }
+}
+
+object Exceptions{
+  def stackTrace(t:Throwable):String = {
+    val buffer = new java.io.ByteArrayOutputStream
+    val writer = new java.io.PrintWriter(buffer,true)
+    
+    t.printStackTrace(writer)
+    
+    writer.flush()
+    writer.close()
+    
+    buffer.toString()
+  }
 }
 
 object Objects{
@@ -114,6 +154,7 @@ object Objects{
 
 
 object BlockStatements{
+  /* exceptions */
 	def attempt[T](f: =>T):Option[T] = 
 	  try{ Objects.toOption(f) }
 	  catch{ case _ => None }
@@ -122,8 +163,9 @@ object BlockStatements{
     attempt(f) match {
       case Some(value) => value
       case None => defaultValue
-    }    
+    }
 
+  /* timing */
   def time[T](f: =>T):(Long,T) = {
     val start = System.currentTimeMillis
     
@@ -152,7 +194,7 @@ object BlockStatements{
     }
   }
   
-  
+  /* threading */
   def thread(block: =>Any) = {
     val t = new Thread(new Runnable{
       def run(){
@@ -174,6 +216,21 @@ object BlockStatements{
     t
   }
 
+  /* caching */
+  import org.scala_tools.time.Imports._
+  def cacheFor[T](duration:Duration)(generator: =>T) = new {
+    private var cacheEnd:DateTime = DateTime.now + duration
+    private var data:T = generator
+    
+    def get():T = {
+      if(DateTime.now > cacheEnd){
+        data = generator
+        cacheEnd = DateTime.now + duration
+      }
+      
+      data
+    }
+  }
 }
 
 class StringDateParsingExtensions(value:String){
@@ -207,6 +264,13 @@ class StringNumberParsingExtensions(val value:String){
 //object Short{def unapply(value:String) = value.parseShort}
 
 class StringExtensions(value:String){
+  
+  def autoElipsis(limit:Int) =
+    if(value.length > limit)
+      value.substring(0,limit - 3)+"..."
+    else
+      value
+  
   def stripQuotes = {
     val trimmed = value.trim
     if(trimmed.length < 2)
