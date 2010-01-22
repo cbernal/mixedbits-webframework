@@ -5,7 +5,7 @@ import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 
-abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends Iterable[T]{
+abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constraint:Option[MongoConstraint]) extends Iterable[T]{
 
   protected def convertRawObject(rawObject:DBObject):T
   protected lazy val cursor:DBCursor = error("not implemented")
@@ -14,13 +14,8 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
     constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject)
   
   def count = size
+  def size = totalCount
   def totalCount = cursor.count
-  def size = {
-    val skip = numToSkip.getOrElse(0)
-    val total = totalCount - skip
-    //if no max results, just return the total, if max results is less than the total, return max results otherwise return the total
-    Math.min(maxResults.getOrElse(total),total)
-  }
   
   
   
@@ -63,7 +58,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
     }
 }
 
-class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends MongoResultSet[JsDocument](collection,constraint,None,None,None){
+class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends MongoResultSet[JsDocument](collection,constraint){
   protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject,collection.database)
   
   override protected lazy val cursor = {
@@ -82,6 +77,14 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
       
       cursor
     }
+  }
+  
+
+  override def size() = {
+    val skip = numToSkip.getOrElse(0)
+    val total = totalCount - skip
+    //if no max results, just return the total, if max results is less than the total, return max results otherwise return the total
+    Math.min(maxResults.getOrElse(total),total)
   }
   
   protected def templateToDBObject = {
