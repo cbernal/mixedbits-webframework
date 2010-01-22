@@ -16,8 +16,14 @@ class Recaptcha(val publicKey:String, val privateKey:String){
     checker
   }
   
+  def generate():Elem =
+    <script type="text/javascript" src={"http://api.recaptcha.net/challenge?k="+publicKey}></script>
+  
+  
+    /*
   def generate():Node =
     Unparsed(captchaBuilder.createRecaptchaHtml(null,null))
+    */
   
   def isValid():Boolean = {
     val request = net.mixedbits.webframework.WebRequest.httpRequest
