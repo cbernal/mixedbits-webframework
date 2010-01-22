@@ -112,6 +112,26 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String) extends M
 
   def find(constraint:MongoConstraint):MongoCollectionUpdateableResultSet =
     new MongoCollectionUpdateableResultSet(this,constraint)
+  
+  def findRandom(maxItems:Int):Iterator[JsDocument] = {
+    val totalItems = count.toInt
+    if(totalItems < maxItems)
+      findAll().elements
+    else{
+      new Iterator[JsDocument]{
+        val indexes = Sequences.randomSet(maxItems,0,totalItems)
+        var currentIndex = 0
+        def next():JsDocument = {
+          val result = findAll.skip(indexes(currentIndex)).limit(1).elements.next
+          
+          currentIndex += 1
+          
+          result
+        }
+        def hasNext():Boolean = currentIndex < indexes.length
+      }
+    }
+  }
     
   def findOne:Option[JsDocument] =
     attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject],database)}

@@ -183,7 +183,7 @@ object MongoFileSystem{
   }
 }
 
-class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[MongoConstraint]) extends MongoResultSet[MongoFile](filesystem.metadata,constraint,None,None,None) with MongoUpdatableResultSet[MongoFile]{
+class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[MongoConstraint]) extends MongoResultSet[MongoFile](filesystem.metadata,constraint) with MongoUpdatableResultSet[MongoFile]{
   override protected lazy val cursor = 
     filesystem.rawFileSystem.getFileList(constraintToDBObject)
 

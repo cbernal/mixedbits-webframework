@@ -11,21 +11,24 @@ trait MongoWebQuery{
     if(consolidatedCriteria != null && consolidatedCriteria.length > 0)
       return consolidatedCriteria(0)
     
-    val querySeparator = ":"+_paramKey+":"
+    val queryStart = _paramKey+":"
     val result = new StringBuffer
     val entries = parameters.entrySet.iterator
     while(entries.hasNext){
       val entry = entries.next
-      val parts = entry.getKey split querySeparator
+      val key = entry.getKey
       val value = entry.getValue
-      
-      if(parts.length == 2 && value.length > 0){
-        result.append(parts(0))
-        result.append(":")
-        result.append(parts(1))
-        result.append(":")
-        result.append(value(0))
-        result.append(";")
+      if(key startsWith queryStart){
+        val parts = key split ":"
+        
+        if(parts.length == 3 && value.length > 0){
+          result.append(parts(1))
+          result.append(":")
+          result.append(parts(2))
+          result.append(":")
+          result.append(value(0))
+          result.append(";")
+        }
       }
     }
     result.toString
@@ -99,6 +102,23 @@ trait MongoWebQuery{
       val results = find(constraint)
       (criteria,results,results.size) 
     }
+  }
+  
+  def searchParam(criteriaParam:Option[String],param:String):Option[String] = {
+    for(criteria <- criteriaParam)
+      yield {
+        val result = for(
+                  entry <- criteria split ';';
+                  if entry startsWith param;
+                  parts = entry split ':';
+                  if parts.size == 3;
+                  if parts(0)+":"+parts(1) == param
+                  ) yield parts(2)
+        if(result.size == 1)
+          result.first
+        else
+          ""
+      }
   }
   
   

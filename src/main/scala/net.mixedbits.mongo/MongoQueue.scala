@@ -125,7 +125,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
         claimedItem match {
           case Some(item) => ItemClaimed(item)
           case None => ItemMissed
-        }                     
+        }
       case None =>
         NoItemFound
     }
