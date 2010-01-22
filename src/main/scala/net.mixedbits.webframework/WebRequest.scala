@@ -10,7 +10,7 @@ object WebRequest{
   val webPath = new DynamicVariable[WebPathMatch](null)
   
   def param(name:String) = 
-    Objects.toOption(httpRequest.getParameter(name))
+    Objects.toOption(httpRequest.getParameter(name)).filter(_!="")
   
   def param(name:String,default:String):String = param(name).getOrElse(default)
 
