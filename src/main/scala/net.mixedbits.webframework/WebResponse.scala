@@ -3,6 +3,7 @@ package net.mixedbits.webframework
 import scala.collection.mutable._
 
 object WebResponseNotFoundException extends Exception
+case class WebResponseForwardPage(path:String) extends Exception
 
 object WebResponse{
   def notFound[T]():T = {throw WebResponseNotFoundException}
@@ -11,6 +12,21 @@ object WebResponse{
 trait WebResponse{
   
   def notFound[T]():T = {throw WebResponseNotFoundException}
+  
+  def forward[T](path:String):T = {throw WebResponseForwardPage(path)}
+    
+  def httpRequestMethod():String = WebRequest.httpRequest.getMethod
+  
+  def isHttpPost():Boolean = httpRequestMethod equalsIgnoreCase "POST"
+  def isHttpGet():Boolean = httpRequestMethod equalsIgnoreCase "GET"
+  
+  def responseCode(code:Int) = 
+    WebRequest.httpResponse.setStatus(code)
+  
+  def responseHeader(name:String,value:String) = 
+    WebRequest.httpResponse.setHeader(name,value)
+  
+  
   
   lazy val registeredPages:List[(String,WebResponse)] = registeredPages(new ListBuffer[(String,WebResponse)],_registeredPages.toList).toList
   
@@ -22,22 +38,11 @@ trait WebResponse{
   }
   private val _registeredPages = new ListBuffer[(String,WebResponse)]()
   
-  def registerPages( pages:(String,WebResponse)* ){
+  protected def registerPages( pages:(String,WebResponse)* ){
     _registeredPages ++= pages
   }
   
   def processRequest():Unit
-  
-  def httpRequestMethod():String = WebRequest.httpRequest.getMethod
-  
-  def isHttpPost():Boolean = httpRequestMethod equalsIgnoreCase "POST"
-  def isHttpGet():Boolean = httpRequestMethod equalsIgnoreCase "GET"
-  
-  def responseCode(code:Int) = 
-    WebRequest.httpResponse.setStatus(code)
-  
-  def responseHeader(name:String,value:String) = 
-    WebRequest.httpResponse.setHeader(name,value)
   
   private val _registeredActions = new ListBuffer[()=>Any]()
   protected def run[T](action: =>T){ _registeredActions += action _ }

@@ -30,6 +30,9 @@ trait WebApplication extends Filter{
                 return showPage(webPage)
               }
               catch{
+                case WebResponseForwardPage(newPath) =>
+                  //detect explicit request for different page
+                  return context.getRequestDispatcher(newPath).forward(httpRequest, httpResponse)
                 case e if e == WebResponseNotFoundException => {
                   //detect explicit request for not found page
                   return showNotFound()
@@ -44,6 +47,7 @@ trait WebApplication extends Filter{
       
       //detect lack of file and show custom not found page
       if(!new java.io.File(httpRequest.getRealPath(path)).exists){
+        //we aren't in the context of a valid path match anymore, just give it a fake one
         WebRequest.webPath.withValue(WebPathMatch(path,path)) {
           return showNotFound()
         }
@@ -59,7 +63,8 @@ trait WebApplication extends Filter{
     page.runActions()
     page.processRequest()
   }
-  private def showNotFound() = showPage(notFoundPage)
+  private def showNotFound() =
+    showPage(notFoundPage)
   
 
   lazy val registeredPages = Map( (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_* ).map{ case(path,page) => WebPath(path) -> page }.toList
