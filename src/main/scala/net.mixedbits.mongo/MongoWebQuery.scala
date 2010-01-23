@@ -21,7 +21,7 @@ trait MongoWebQuery{
       if(key startsWith queryStart){
         val parts = key split ":"
         
-        if(parts.length == 3 && value.length > 0){
+        if(parts.length == 3 && value.length > 0 && value(0)!=""){
           result.append(parts(1))
           result.append(":")
           result.append(parts(2))
