@@ -2,6 +2,7 @@ package net.mixedbits.mongo
 
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
+import net.mixedbits.tools.Sequences._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 
@@ -111,6 +112,17 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
     limit(toOption(newResultsCount))
   def limit(newResultsCount:Option[Int]):MongoCollectionResultSet =
     new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount)
+  
+
+  def distinct[T](property:JsProperty[T]):Seq[T] = 
+    collection.usingReadConnection{
+      connection => 
+      {
+        for(result <- connection.distinct(property.propertyName,constraintToDBObject).iterator)
+          yield result.asInstanceOf[T]
+      }.toList
+    }
+
 }
 
 class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None) with MongoUpdatableResultSet[JsDocument]{
