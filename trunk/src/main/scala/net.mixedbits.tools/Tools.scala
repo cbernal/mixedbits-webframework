@@ -15,6 +15,9 @@ object Strings{
 }
 
 object Sequences{
+  
+  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) = new scala.collection.jcl.MutableIterator.Wrapper(it)
+
   implicit def sequenceExtensions[T](value:Seq[T]) = new SequenceExtensions(value)
   
   def sort[T](list:Array[T])(compareFunction:(T,T) => Boolean):Array[T] = scala.util.Sorting.stableSort(list,compareFunction)
@@ -270,6 +273,25 @@ class StringExtensions(value:String){
       value.substring(0,limit - 3)+"..."
     else
       value
+    
+  def toMixedCase() = {
+    //Uppercase the first letter in each word
+    val charArray = value.toLowerCase.trim.toCharArray
+    val outCharArray = new Array[Char](charArray.length)
+    val punctSpacePattern = java.util.regex.Pattern.compile("""[ '\-.]""")
+    
+    var lastCharWasWhitespaceOrPunct = false
+    for(i <- 0 until charArray.length){
+      var temp = charArray(i)
+      if( i==0 || lastCharWasWhitespaceOrPunct )
+      temp = Character.toUpperCase(temp)
+      
+      lastCharWasWhitespaceOrPunct = punctSpacePattern.matcher(temp.toString).matches()
+      outCharArray(i) = temp
+    }
+    
+    new String(outCharArray)
+  }
   
   def stripQuotes = {
     val trimmed = value.trim
@@ -298,7 +320,7 @@ class SequenceExtensions[T](items:Seq[T]){
     case _ if desiredQuantity < 0 => items.toArray
     case _ => Sorting.stableSort(items,(a:T,b:T)=>MiscTools.random.nextBoolean).take(desiredQuantity)
   }
-  def selectRandom(minQuantity:Int,maxQuantity:Int):Array[T] = selectRandom(MiscTools.randomInt(minQuantity,maxQuantity)) 
+  def selectRandom(minQuantity:Int,maxQuantity:Int):Array[T] = selectRandom(MiscTools.randomInt(minQuantity,maxQuantity))
 }
 
 private object MiscTools{
