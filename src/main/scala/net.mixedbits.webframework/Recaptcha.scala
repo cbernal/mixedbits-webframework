@@ -1,10 +1,15 @@
 package net.mixedbits.webframework
 
 import scala.xml._
+import net.mixedbits.webframework.Tools._
+import net.mixedbits.tools._
 
 import net.tanesha.recaptcha._
 
-class Recaptcha(val publicKey:String, val privateKey:String){
+class Recaptcha(val publicKey:String, val privateKey:String,theme:Option[String]){
+  def this(publicKey:String,privateKey:String) = this(publicKey,privateKey,None)
+  def this(publicKey:String,privateKey:String,theme:String) = this(publicKey,privateKey,Objects.toOption(theme))
+  
   val challengeFieldName = "recaptcha_challenge_field"
   val responseFieldName = "recaptcha_response_field"
   
@@ -14,10 +19,20 @@ class Recaptcha(val publicKey:String, val privateKey:String){
     val checker = new ReCaptchaImpl
     checker.setPrivateKey(privateKey)
     checker
-  }
+  }    
   
-  def generate():Elem =
-    <script type="text/javascript" src={"http://api.recaptcha.net/challenge?k="+publicKey}></script>
+  def generate():Elem = 
+    <div class="captcha">
+      {
+        (
+          for(value <- theme)
+            yield
+              <script type="text/javascript">var RecaptchaOptions = {"{ theme : '"+value+"' }"};</script>
+        ).getOrElse(null)
+      }
+      <script type="text/javascript" src={"http://api.recaptcha.net/challenge?k="+publicKey}></script>
+      <noscript><p>You must have javascript enabled in order to use this form.  Please refer to your web browser help documentation for information on how to do this</p></noscript>
+    </div>
   
   
     /*
