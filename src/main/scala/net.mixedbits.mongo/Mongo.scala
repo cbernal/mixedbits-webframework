@@ -55,7 +55,10 @@ object MongoTools{
   
   def checkBatchDetails(db:DB):Int = {
     val details = lastError(db)
-    //do some error checking?
+    
+    //throw an exception if there is an error message
+    for(message <- details(Mongo.Error.Message); if message != "")
+      error(details.toJson)
     
     //return the document count, or -1 if it wasn't returned
     details(Mongo.Error.DocumentCount,-1)

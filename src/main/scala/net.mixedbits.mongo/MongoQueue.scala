@@ -20,6 +20,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   case class EnqueueItem(newProcessTime:DateTime) extends MongoQueueResult(None,Some(newProcessTime))
   case object RemoveItem extends MongoQueueResult(None,None)
   case object ProcessingComplete extends MongoQueueResult(None,None)
+  case object ItemFailed extends MongoQueueResult(None,None)
   
   private sealed abstract class NextItemResult
   private case class ItemClaimed(item:T) extends NextItemResult
@@ -33,6 +34,9 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   protected val onItemMissed = new SimpleEvent
   protected val onBeforeItem = new Event[T]
   protected val onAfterItem = new Event[T]
+  protected val onClaimTimeout = new Event[T]
+  protected val onItemFailed = new Event[(T,Throwable)]
+  protected val onUpdateFailed = new Event[(T,Throwable)]
   
   def start(){
     _enabled = true
@@ -103,31 +107,47 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   }
   
   private def nextItem():NextItemResult = {
-    // TODO: somehow deal with items that have been started but not completed within the alotted time
-    //       maybe by searching for claimed items, that have a started time over a certain age
+    def findAndClaim(criteria:MongoConstraint) = 
+      //find items and ensure that they were properly claimed here
+      collection.findOne(criteria) match {
+        case Some(item) =>
+          //ensure that we have all appropriate fields, then attempt to use them to update the item database, thereby "claiming" the item
+          val claimedItem = for(
+                              itemId <- item(JsDocument.Id);
+                              uniqueId <- item(queue.UniqueId);
+                              updated = collection.find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
+                                              .updateFirst(
+                                                  queue.UniqueId <~ MongoTools.generateId() and
+                                                  ClaimedBy <~ serverName and
+                                                  LastStarted <~ new Date() and
+                                                  LastFinished <~ None
+                                                  )
+                              if updated
+                              ) yield item
+          claimedItem match {
+            case Some(item) => ItemClaimed(item)
+            case None => ItemMissed
+          }
+        case None =>
+          NoItemFound
+      }
     
-    //claim items and ensure that they were properly claimed here
-    collection.findOne(ClaimedBy == null and ScheduledTime <= new Date()) match {
-      case Some(item) =>
-        //ensure that we have all appropriate fields, then attempt to use them to update the item database, thereby "claiming" the item
-        val claimedItem = for(
-                            itemId <- item(JsDocument.Id);
-                            uniqueId <- item(queue.UniqueId);
-                            updated = collection.find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
-                                            .updateFirst(
-                                                queue.UniqueId <~ MongoTools.generateId() and
-                                                ClaimedBy <~ serverName and
-                                                LastStarted <~ new Date() and
-                                                LastFinished <~ None
-                                                )
-                            if updated
-                            ) yield item
-        claimedItem match {
-          case Some(item) => ItemClaimed(item)
-          case None => ItemMissed
-        }
-      case None =>
-        NoItemFound
+    //claimed items that have exceeded the claim timeout
+    val timeoutClaimResult = findAndClaim(ClaimedBy != null and LastFinished == null and LastStarted <= (DateTime.now - queueClaimTimeout).toDate)
+    
+    timeoutClaimResult match {
+      
+      //if there weren't any timeout items to run, get a normal item
+      case ItemMissed | NoItemFound =>
+        //unclaimed items that area ready to run
+        findAndClaim(ClaimedBy == null and ScheduledTime <= new Date())
+        
+      //we claimed a timeout item, send notification, and then process the item
+      case ItemClaimed(item) =>
+        
+        onClaimTimeout(item)
+      
+        timeoutClaimResult
     }
   }
   
@@ -138,36 +158,61 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
     }
     catch{
       case e =>
-        // TODO: probably re-enqueue for immediate processing and increment some retry counter
-        // TODO: maybe email if retry counter exceeds some limit
+        onItemFailed(item,e)
+        processItemResult(item,ItemFailed)
+
         println("error processing item")
         e.printStackTrace()
     }
   }
   
-  private def processItemResult(item:T,result:MongoQueueResult){
+  private def processItemResult(item:T,result:MongoQueueResult):Unit = 
+    processItemResult(item,result,0)
+  
+  private def processItemResult(item:T,result:MongoQueueResult,attempt:Int){
+    def updateItem(updates:MongoUpdate) = 
+      for(itemId <- item(JsDocument.Id))
+        yield collection.find(JsDocument.Id == itemId and ClaimedBy == serverName)
+          .updateFirst(updates)
+    
     try{
+
       result match {
+        case ItemFailed =>
+          // re-enqueue for immediate processing and increment retry counter
+          updateItem(enqueue() and RetryCount + 1) match {
+            case Some(true) => ()
+            case Some(false) => error("update failure: couldn't find item to update")
+            case None => error("update failure: couldn't find id of item to update")
+          }
+          
         case RemoveItem => 
           //code to remove item...
           collection.remove(item)
+          
         case results =>
           //all other cases
           val newValues = results.updates
           val newProcessTime = results.processTime.map(ScheduledTime <~ _.toDate and queue.UniqueId <~ MongoTools.generateId)
           
           //make sure we have an id, make sure we claimed the item, and then mark it as processed and apply the users requested changes
-          for(itemId <- item(JsDocument.Id))
-            collection.find(JsDocument.Id == itemId and ClaimedBy == serverName)
-                      .updateFirst(ScheduledTime <~ None and ClaimedBy <~ None and LastFinished <~ new Date() and TimesProcessed + 1 and newValues and newProcessTime)
-                      
-          // TODO: we should check that the update actually occurred incase there wasn't an error, but the criteria wasn't able to match the item
+          updateItem(ScheduledTime <~ None and ClaimedBy <~ None and LastFinished <~ new Date() and TimesProcessed + 1 and newValues and newProcessTime) match {
+            case Some(true) => ()
+            case Some(false) => error("update failure: couldn't find item to update")
+            case None => error("update failure: couldn't find id of item to update")
+          }
+
       }
     }
     catch{
       case e =>
-        // TODO: maybe retry a couple of times, then send notification
-        println("error dealing with item results")
+        // retry a couple of times, then send notification
+        if(attempt >= maxUpdateAttempts)
+          onUpdateFailed(item,e)
+        else
+          processItemResult(item,result,attempt+1)
+      
+        println("error updating item")
         e.printStackTrace()
     }
   }
@@ -198,6 +243,8 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   //how long to wait before stealing a claimed item from another server
   def queueClaimTimeout:Duration
   
+  def maxUpdateAttempts = 5
+  
   //this will be used to identify who claimed the item
   val serverName:String = Network.hostname
   
@@ -207,4 +254,5 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   object LastFinished extends JsDateProperty(queue)
   object LastStarted extends JsDateProperty(queue)
   object TimesProcessed extends JsIntProperty(queue)
+  object RetryCount extends JsIntProperty(queue)
 }
