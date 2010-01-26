@@ -55,7 +55,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
         updates.buildUpdateObject
       )
       
-      MongoTools.checkBatchDetails(db) > 0
+      MongoTools.checkBatchDetails(db) == 1
     }
 }
 
