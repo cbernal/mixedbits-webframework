@@ -95,6 +95,8 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
     find(Folder == folder and Extension == extension)
   //  rawFileSystem.find(new BasicDBObject("metadata",new BasicDBObject("folder",MongoFileSystem.normalizePath(folder)+"/").append("extension",extension)))
   
+  def exists(path:String):Boolean = 
+    getFile(path).isDefined
 
   def getFile(path:String):Option[MongoFile] = 
     Objects.toOption(rawFileSystem.findOne(MongoFileSystem.normalizePath(path)))
