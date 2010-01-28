@@ -59,7 +59,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
     }
 }
 
-class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int]) extends MongoResultSet[JsDocument](collection,constraint){
+class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Option[JsPropertyGroup]) extends MongoResultSet[JsDocument](collection,constraint){
   protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject,collection.database)
   
   override protected lazy val cursor = {
@@ -76,6 +76,9 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
       for(value <- maxResults)
         cursor = cursor.limit(value)
       
+      for(value <- sortBy)
+        cursor = cursor.sort(propertyGroupToDBObject(value))
+      
       cursor
     }
   }
@@ -89,10 +92,13 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
   }
   
   protected def templateToDBObject = {
+    resultTemplate.map(propertyGroupToDBObject(_)).getOrElse(new BasicDBObject)
+  }
+  
+  protected def propertyGroupToDBObject(propertyGroup:JsPropertyGroup) = {
     val result = new BasicDBObject
-    for(template <- resultTemplate)
-      for(property <- template.properties)
-        result.put(property.propertyName,1)
+    for(property <- propertyGroup.properties)
+      result.put(property.propertyName,1)
     result
   }
   
@@ -101,18 +107,26 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
   def select(newResultTemplate:JsPropertyGroup):MongoCollectionResultSet =
     select(toOption(newResultTemplate)) 
   def select(newResultTemplate:Option[JsPropertyGroup]):MongoCollectionResultSet = 
-    new MongoCollectionResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults)
+    new MongoCollectionResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults,sortBy)
   
   def skip(newSkipCount:Int):MongoCollectionResultSet =
     skip(toOption(newSkipCount))
   def skip(newSkipCount:Option[Int]):MongoCollectionResultSet =
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults)
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults,sortBy)
   
   def limit(newResultsCount:Int):MongoCollectionResultSet =
     limit(toOption(newResultsCount))
   def limit(newResultsCount:Option[Int]):MongoCollectionResultSet =
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount)
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount,sortBy)
   
+  
+  def sortBy(newSortBy:JsProperty[_]):MongoCollectionResultSet =
+    sortBy(new JsPropertyGroup(newSortBy))  
+  def sortBy(newSortBy:JsPropertyGroup):MongoCollectionResultSet = 
+    sortBy(toOption(newSortBy))
+  def sortBy(newSortBy:Option[JsPropertyGroup]):MongoCollectionResultSet = 
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,newSortBy)
+    
 
   def distinct[T](property:JsProperty[T]):Seq[T] = 
     collection.usingReadConnection{
@@ -122,10 +136,12 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
           yield result.asInstanceOf[T]
       }.toList
     }
+    
+  
 
 }
 
-class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None) with MongoUpdatableResultSet[JsDocument]{
+class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,None) with MongoUpdatableResultSet[JsDocument]{
   def update(updates:MongoUpdate):Int =
     updateCollection(collection)(updates)
   

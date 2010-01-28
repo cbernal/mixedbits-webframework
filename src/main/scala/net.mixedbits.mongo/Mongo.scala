@@ -116,17 +116,8 @@ object MongoTools{
 
   /*
   mongo todo:
-    gridfs support
     test equality array query operators
     add array specific query operators
     other advanced query operators
     db references?
-    support for limit random count group etc for search results
-    
-  config todo:
-  
-  
-  app todo:
-    
-  
   */
