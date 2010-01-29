@@ -8,6 +8,8 @@ import com.mongodb._
 import scala.collection.mutable.ListBuffer
 
 trait MongoBaseCollection[T <: JsDocument]{
+  def count():Long
+  
   def findOne(constraint:MongoConstraint):Option[T]
   def findAll():MongoResultSet[T] with MongoUpdatableResultSet[T]
   def find(constraint:MongoConstraint):MongoResultSet[T] with MongoUpdatableResultSet[T]
