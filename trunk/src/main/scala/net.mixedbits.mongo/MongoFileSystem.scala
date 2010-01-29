@@ -77,6 +77,8 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
     inputFile.save
   }
   
+  def count() = metadata.count
+  
   def findOne(constraint:MongoConstraint):Option[MongoFile] = 
     Objects.toOption(rawFileSystem.findOne(constraint.buildSearchObject))
       .map(new MongoFile(_,database))
