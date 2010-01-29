@@ -19,6 +19,8 @@ object WebRequest{
   def httpRequest = requestContext.value._3
   def httpResponse = requestContext.value._4
   def webpath = webPath.value
+  def queryString = httpRequest.getQueryString
+  def currentPath = webpath.url+"?"+queryString
 }
 
 
@@ -27,6 +29,8 @@ trait WebRequest{
   def param(name:String) = WebRequest.param(name)
   def param(name:String,default:String):String = param(name).getOrElse(default)
   def webpath = WebRequest.webpath
+  def queryString = WebRequest.queryString
+  def currentPath = WebRequest.currentPath
   
   def params = WebRequest.httpRequest.getParameterMap.asInstanceOf[java.util.Map[String,Array[String]]]
   
