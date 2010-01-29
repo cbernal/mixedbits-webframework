@@ -83,6 +83,8 @@ trait MongoWebQuery{
     operation match {
       case "eq" => property == value
       case "ne" => property != value
+      case "empty" => property == null
+      case "notempty" => property != null
     }
 
     /*
@@ -99,6 +101,7 @@ trait MongoWebQuery{
     val criteria = collectParameters(parameters)
     buildSearchConstraint(criteria).map{
       constraint =>
+      
       val results = find(constraint)
       (criteria,results,results.size) 
     }
