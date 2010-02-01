@@ -73,6 +73,8 @@ trait WebPage extends TextResponse{
   
   def body:Elements
   
+  def output[T >: AnyRef](content:Option[T]):T = content getOrElse null
+  
 }
 
 
