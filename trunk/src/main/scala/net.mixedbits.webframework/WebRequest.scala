@@ -20,7 +20,12 @@ object WebRequest{
   def httpResponse = requestContext.value._4
   def webpath = webPath.value
   def queryString = httpRequest.getQueryString
-  def currentPath = webpath.url+"?"+queryString
+  def currentPath = Objects.toOption(queryString) match { 
+    case Some(query) => webpath.url+"?"+query
+    case None => webpath.url
+  }
+
+  def hostName = httpRequest.getHeader("host")
 }
 
 
@@ -31,6 +36,7 @@ trait WebRequest{
   def webpath = WebRequest.webpath
   def queryString = WebRequest.queryString
   def currentPath = WebRequest.currentPath
+  def hostName = WebRequest.hostName
   
   def params = WebRequest.httpRequest.getParameterMap.asInstanceOf[java.util.Map[String,Array[String]]]
   
