@@ -6,6 +6,8 @@ import Sequences._
 import Files._
 import BlockStatements._
 
+import org.scala_tools.time.Imports._
+
 object Numbers{
   implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)  
 }
@@ -220,19 +222,34 @@ object BlockStatements{
   }
 
   /* caching */
-  import org.scala_tools.time.Imports._
-  def cacheFor[T](duration:Duration)(generator: =>T) = new {
-    private var cacheEnd:DateTime = DateTime.now + duration
-    private var data:T = generator
+  def cacheFor[T](duration:Duration)(generator: =>T) = new Cache(duration,{generator})
+  def cacheMulti[K,V](duration:Duration)(generator: K=>V) = new CacheMulti(duration,generator)
+}
+
+class CacheMulti[K,V](duration:Duration,generator: K=>V){
+  import scala.collection.mutable._
+  
+  private val map = Map[K,Cache[V]]()
+  
+  def apply(key:K):V = {
+    if(!map.contains(key))
+      map(key) = new Cache(duration,generator(key))
     
-    def get():T = {
-      if(DateTime.now > cacheEnd){
-        data = generator
-        cacheEnd = DateTime.now + duration
-      }
-      
-      data
+    map(key)()
+  }
+}
+
+class Cache[T](duration:Duration,generator: =>T){
+  private var cacheEnd:DateTime = DateTime.now + duration
+  private var data:T = generator
+  
+  def apply():T = {
+    if(DateTime.now > cacheEnd){
+      data = generator
+      cacheEnd = DateTime.now + duration
     }
+    
+    data
   }
 }
 
