@@ -30,6 +30,12 @@ trait WebApplication extends Filter{
                 return showPage(webPage)
               }
               catch{
+                case WebResponseRedirect(redirectType,location) =>
+                  val HttpRedirect(code) = redirectType
+                  WebResponse.responseCode(code)
+                  WebResponse.responseHeader("Location",location)
+                  return
+                  
                 case WebResponseForwardPage(newPath) =>
                   //detect explicit request for different page
                   return context.getRequestDispatcher(newPath).forward(httpRequest, httpResponse)
