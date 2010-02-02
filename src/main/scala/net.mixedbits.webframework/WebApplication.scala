@@ -24,28 +24,7 @@ trait WebApplication extends Filter{
       for( (webPath,webPage) <- registeredPages ){
         val result = webPath testPath path
         result match{
-          case Some(webPathMatch) => {
-            WebRequest.webPath.withValue(webPathMatch) {
-              try{
-                return showPage(webPage)
-              }
-              catch{
-                case WebResponseRedirect(redirectType,location) =>
-                  val HttpRedirect(code) = redirectType
-                  WebResponse.responseCode(code)
-                  WebResponse.responseHeader("Location",location)
-                  return
-                  
-                case WebResponseForwardPage(newPath) =>
-                  //detect explicit request for different page
-                  return context.getRequestDispatcher(newPath).forward(httpRequest, httpResponse)
-                case e if e == WebResponseNotFoundException => {
-                  //detect explicit request for not found page
-                  return showNotFound()
-                }
-              }
-            }
-          }
+          case Some(webPathMatch) => return showPage(webPage,webPathMatch)
           case None => ()
         }
       }
@@ -53,11 +32,12 @@ trait WebApplication extends Filter{
       
       //detect lack of file and show custom not found page
       if(!new java.io.File(httpRequest.getRealPath(path)).exists){
+        
         //we aren't in the context of a valid path match anymore, just give it a fake one
-        WebRequest.webPath.withValue(WebPathMatch(path,path)) {
-          return showNotFound()
-        }
+        return showPage(notFoundPage,WebPathMatch(path,path))
+        
       }
+      
       
 
     }
@@ -65,12 +45,30 @@ trait WebApplication extends Filter{
     chain.doFilter(request, response)
   }
   
-  private def showPage(page:WebResponse){
-    page.runActions()
-    page.processRequest()
+  private def showPage(page:WebResponse,webPath:WebPathMatch){
+    WebRequest.webPath.withValue(webPath) {
+      try{
+        page.runActions()
+        page.processRequest()
+      }
+      catch{
+        case WebResponseRedirect(redirectType,location) =>
+          val HttpRedirect(code) = redirectType
+          WebResponse.responseCode(code)
+          WebResponse.responseHeader("Location",location)
+          
+        case WebResponseForwardPage(newPath) =>
+          //detect explicit request for different page
+          context.getRequestDispatcher(newPath).forward(WebRequest.httpRequest, WebRequest.httpResponse)
+          
+        case e if e == WebResponseNotFoundException => {
+          //detect explicit request for not found page
+          showPage(notFoundPage,webPath)
+          
+        }
+      }
+    }
   }
-  private def showNotFound() =
-    showPage(notFoundPage)
   
 
   lazy val registeredPages = Map( (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_* ).map{ case(path,page) => WebPath(path) -> page }.toList
