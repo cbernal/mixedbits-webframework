@@ -82,15 +82,18 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String) extends M
             case Left(property) =>
               val indexDescription = JsObject(property.propertyName->1).obj
               //println("Ensuring index: "+indexDescription)
+              //printDuration{
               connection.ensureIndex(indexDescription)
-            
+              //}
             
             case Right( (indexName, properties) ) =>
               val indexDescription = new BasicDBObject
               for(property <- properties)
                 indexDescription.put(property.propertyName,1)
               //println("Ensuring index("+indexName+"): "+indexDescription)
+              //printDuration{
               connection.ensureIndex(indexDescription,indexName)
+              //}
               
           }
         }
