@@ -24,6 +24,14 @@ trait JsProperty[T]{
       toOption(currentObject.get(shortName).asInstanceOf[X])
   }
   
+  def isDefinedOnObject(obj:DBObject):Boolean = {
+    val currentObject = resolveObject(obj,false)
+    if(currentObject == null || !currentObject.containsField(shortName))
+      false
+    else
+      true
+  }
+  
   def removeValue(obj:DBObject){
     toOption(resolveObject(obj,false)).map(_.removeField(shortName))
   }

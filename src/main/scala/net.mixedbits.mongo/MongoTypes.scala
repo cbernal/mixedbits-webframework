@@ -58,6 +58,9 @@ class JsObject(baseObject:DBObject){
     this
   }
   
+  def contains(property:JsProperty[_]):Boolean = 
+    property.isDefinedOnObject(obj)
+  
   def toJson():String = obj.toString
   override def toString = toJson
 }

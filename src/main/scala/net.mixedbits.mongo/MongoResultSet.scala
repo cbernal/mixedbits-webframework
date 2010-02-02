@@ -6,6 +6,12 @@ import net.mixedbits.tools.Sequences._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 
+sealed abstract class SortDirection(val value:Int)
+object SortDirection{
+  case object Ascending extends SortDirection(1)
+  case object Descending extends SortDirection(-1)
+}
+
 abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constraint:Option[MongoConstraint]) extends Iterable[T]{
 
   protected def convertRawObject(rawObject:DBObject):T
@@ -17,8 +23,6 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
   def count = size
   def size = totalCount
   def totalCount = cursor.count
-  
-  
   
   def elements = new Iterator[T]{
     private lazy val internalIterator = cursor.iterator // cursor
@@ -59,7 +63,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
     }
 }
 
-class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Option[JsPropertyGroup]) extends MongoResultSet[JsDocument](collection,constraint){
+class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
   protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject,collection.database)
   
   override protected lazy val cursor = {
@@ -76,8 +80,8 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
       for(value <- maxResults)
         cursor = cursor.limit(value)
       
-      for(value <- sortBy)
-        cursor = cursor.sort(propertyGroupToDBObject(value))
+      for(value <- prepareSortBy)
+        cursor = cursor.sort(value)
       
       cursor
     }
@@ -102,6 +106,16 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
     result
   }
   
+  protected def prepareSortBy():Option[DBObject] = {
+    if(sortBy.size == 0)
+      return None
+
+    val result = new BasicDBObject
+    for( (property,direction) <- sortBy)
+      result.put(property.propertyName,direction.value)
+    result
+  }
+  
   def select(newResultTemplate:JsProperty[_]):MongoCollectionResultSet =
     select(new JsPropertyGroup(newResultTemplate))  
   def select(newResultTemplate:JsPropertyGroup):MongoCollectionResultSet =
@@ -121,11 +135,13 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
   
   
   def sortBy(newSortBy:JsProperty[_]):MongoCollectionResultSet =
-    sortBy(new JsPropertyGroup(newSortBy))  
-  def sortBy(newSortBy:JsPropertyGroup):MongoCollectionResultSet = 
-    sortBy(toOption(newSortBy))
-  def sortBy(newSortBy:Option[JsPropertyGroup]):MongoCollectionResultSet = 
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,newSortBy)
+    sortAscending(newSortBy)
+  def sortAscending(newSortBy:JsProperty[_]):MongoCollectionResultSet =
+    sortBy(newSortBy,SortDirection.Ascending)
+  def sortDescending(newSortBy:JsProperty[_]):MongoCollectionResultSet =
+    sortBy(newSortBy,SortDirection.Descending)
+  def sortBy(newSortBy:JsProperty[_],direction:SortDirection):MongoCollectionResultSet = 
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,sortBy ++ List( (newSortBy,direction) ))
     
 
   def distinct[T](property:JsProperty[T]):Seq[T] = 
@@ -141,7 +157,7 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
 
 }
 
-class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,None) with MongoUpdatableResultSet[JsDocument]{
+class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
   def update(updates:MongoUpdate):Int =
     updateCollection(collection)(updates)
   
