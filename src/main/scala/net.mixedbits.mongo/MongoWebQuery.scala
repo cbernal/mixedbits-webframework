@@ -41,12 +41,20 @@ trait MongoWebQuery{
     attempt{
       val constraints = new MongoConstraintGroup
       
+      val foundParams = new scala.collection.mutable.ListBuffer[String]
+      
       val entries = criteria split ';'
       for(entry <- entries){
         val parts = entry split ':'
-        for( constraint <- extractConstraint( parts(0), parts(1), parts(2) ) )
+        for( constraint <- extractConstraint( parts(0), parts(1), parts(2) ) ){
+          foundParams += parts(0)
           constraints += constraint
+        }
       }
+      
+      //ensure that all required params were found
+      if(!_requiredParameters.forall{foundParams contains _})
+        return None
   
       constraints
     }
@@ -131,6 +139,12 @@ trait MongoWebQuery{
   def queryParameters(paramKey:String)(params:PartialFunction[String,(String,String)=>MongoConstraint]){
     _paramKey = paramKey
     _queryParameters = params 
+  }
+  
+  private var _requiredParameters = new scala.collection.mutable.ListBuffer[String]()
+  
+  def requireParameters(paramNames:String*){
+    _requiredParameters ++= paramNames
   }
 }
   
