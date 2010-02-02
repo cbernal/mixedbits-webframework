@@ -31,4 +31,6 @@ class Event[T]{
       catch{ case _ => () }
     }
   }
+  
+  def enabled = funcs.size > 0
 }
