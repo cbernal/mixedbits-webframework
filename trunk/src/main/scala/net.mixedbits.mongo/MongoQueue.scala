@@ -37,6 +37,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   protected val onClaimTimeout = new Event[T]
   protected val onItemFailed = new Event[(T,Throwable)]
   protected val onUpdateFailed = new Event[(T,Throwable)]
+  protected val onSpeedUpdate = new Event[(Int,Duration)]
   
   def start(){
     _enabled = true
@@ -59,14 +60,49 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
       threadToJoin.join
   }
   
-  def totalEligible() = 
-    collection.find(ClaimedBy == null and ScheduledTime <= new Date()).count
+  def totalEligible(time:DateTime):Long = 
+    collection.find(ClaimedBy == null and ScheduledTime <= time.toDate).count
+    
+  def totalEligible():Long = 
+    totalEligible(DateTime.now)
   
   private val threadLock = new AnyRef
   
   def enabled = _enabled
   private var _enabled = false
   private var currentThread:Thread = null
+  
+  
+  def totalProcessed = _totalProcessed
+  private var _totalProcessed = 0
+  private var _currentProcessed = 0
+  private var _statsStartTime = 0L
+  
+  private def incrementStats(){
+    _totalProcessed+=1
+    _currentProcessed+=1
+    
+    //check to see if we should send stats
+    sendSpeedStats()
+  }
+  
+  private def prepareSpeedStats(){
+    _currentProcessed = 0
+    _statsStartTime = System.currentTimeMillis
+  }
+  
+  private def sendSpeedStats(){sendSpeedStats(false)}
+  private def sendSpeedStats(force:Boolean){
+    if(!onSpeedUpdate.enabled)
+      return
+    
+    val currentTime = System.currentTimeMillis
+    val elapsed = currentTime - _statsStartTime
+    if(force || elapsed > _statsSpeedDurationInMillis){
+      onSpeedUpdate( (_currentProcessed,new Duration(elapsed)) )
+      prepareSpeedStats()
+    }
+  }
   
   private def ensureThreadIsRunning(){
     threadLock synchronized {
@@ -80,6 +116,12 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   private def createThread() = daemonThread{
     onStart()
     
+    //always prepare to capture speed stats when starting a new thread
+    prepareSpeedStats()
+    
+    val pauseMillis = queuePauseDuration.millis
+    val idleMillis = queueIdleDuration.millis
+    
     //do code that handles reading from the queue here...
     while(enabled){
       nextItem match {
@@ -87,12 +129,21 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
           onBeforeItem(item)
           processItem(item)
           onAfterItem(item)
-          if(enabled)
-            Thread.sleep(queuePauseDuration.millis)
+          
+          //always increments stats after processing an item
+          incrementStats()
+          
+          if(enabled && pauseMillis > 0)
+            Thread.sleep(pauseMillis)
+          
         case NoItemFound =>
+          //always send speed stats right before going idle...
+          sendSpeedStats(true)
+          
           if(enabled){
             onIdle()
-            Thread.sleep(queueIdleDuration.millis)
+            if(idleMillis > 0)
+              Thread.sleep(queueIdleDuration.millis)
           }
         case ItemMissed =>
           onItemMissed()
@@ -243,7 +294,13 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   //how long to wait before stealing a claimed item from another server
   def queueClaimTimeout:Duration
   
+  //how many times to attempt applying item updates before giving up
   def maxUpdateAttempts = 5
+  
+  //def statsSpeedDuration:Duration
+  //
+  //private lazy val _statsSpeedDurationInMillis = statsSpeedDuration.millis
+  private val _statsSpeedDurationInMillis = 1.minute.millis
   
   //this will be used to identify who claimed the item
   val serverName:String = Network.hostname
