@@ -68,7 +68,12 @@ trait JsProperty[T]{
   def ==(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"",value)
   def !=(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"$ne",value)
   
-  //add support for in, exists, dbref
+  def in (values:Seq[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"$in",JsArray(values).list)
+  def notIn (values:Seq[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"$nin",JsArray(values).list)
+  
+  //add support exists, dbref
+  def exists(value:Boolean):MongoConstraint = new MongoPropertyConstraint(propertyName,"$exists",value)
+  
   
   //update operators
   def <~ (value:T):MongoUpdate = 
@@ -107,6 +112,9 @@ class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   override def ==(value:JsArray[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"",value.list)
   override def !=(value:JsArray[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"$ne",value.list)
+  
+  def contains(value:T):MongoConstraint = new MongoPropertyConstraint(propertyName,"",value)
+  def containsAll(values:Seq[T]):MongoConstraint = new MongoPropertyConstraint(propertyName,"$all",JsArray(values).list)
   
   def +(value:T):MongoUpdate = this += value
   def ++(value:Seq[T]):MongoUpdate = this ++= value
