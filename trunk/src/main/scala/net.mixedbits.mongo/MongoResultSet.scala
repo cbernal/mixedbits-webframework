@@ -21,6 +21,7 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
     constraint.map(_.buildSearchObject).getOrElse(new BasicDBObject)
   
   def count = size
+  def length = size
   def size = totalCount
   def totalCount = cursor.count
   
