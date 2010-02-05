@@ -10,7 +10,9 @@ import scala.collection.mutable.ListBuffer
 
 abstract class MongoConstraint{
   def &&(constraint:MongoConstraint) = this and constraint
-  def and(constraint:MongoConstraint):MongoConstraintGroup = new MongoConstraintGroup(this,constraint)
+  def and(constraint:Option[MongoConstraint]):MongoConstraint = 
+    constraint.map(new MongoConstraintGroup(this,_)).getOrElse(this)
+  def and(constraint:MongoConstraint):MongoConstraint = new MongoConstraintGroup(this,constraint)
   def buildSearchObject:BasicDBObject = applyToSearchObject(new BasicDBObject)
   def applyToSearchObject(obj:BasicDBObject):BasicDBObject
   override def toString = buildSearchObject.toString
@@ -25,10 +27,10 @@ class MongoConstraintGroup extends MongoConstraint{
 
   protected val constraints = new ListBuffer[MongoConstraint]
   
-  override def and(constraint:MongoConstraint):MongoConstraintGroup =
+  override def and(constraint:MongoConstraint):MongoConstraint =
     this += constraint
   
-  def += (constraint:MongoConstraint):MongoConstraintGroup = {
+  def += (constraint:MongoConstraint):MongoConstraint = {
     constraints += constraint
     this
   }

@@ -154,7 +154,25 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
       }.toList
     }
     
-  
+  def random(maxItems:Int):Iterator[JsDocument] = {
+    val totalItems = count.toInt
+    if(totalItems <= maxItems)
+      elements
+    else{
+      new Iterator[JsDocument]{
+        val indexes = Sequences.randomSet(maxItems,0,totalItems - 1)
+        var currentIndex = 0
+        def next():JsDocument = {
+          val result = skip(indexes(currentIndex)).limit(1).elements.next
+          
+          currentIndex += 1
+          
+          result
+        }
+        def hasNext():Boolean = currentIndex < indexes.length
+      }
+    }
+  }
 
 }
 
