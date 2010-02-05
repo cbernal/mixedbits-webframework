@@ -24,16 +24,16 @@ class HttpRequest private[tools](requestMethod:String,url:String){
   //private case class MultipartRequestBody() extends RequestBody
   
   //headers
-  private var contentLength = -1L
-  private var headerValues = new ListBuffer[(String,String)]()
+  private var _contentLength = -1L
+  private var _headerValues = new ListBuffer[(String,String)]()
   
   private var hostName:String = null
   
   //forms
-  private var formValues = new ListBuffer[(String,String)]()
+  private var _formValues = new ListBuffer[(String,String)]()
   
   //querys
-  private var queryValues = new ListBuffer[(String,String)]()
+  private var _queryValues = new ListBuffer[(String,String)]()
   
   //context
   private var httpContext = new HttpContext
@@ -48,38 +48,38 @@ class HttpRequest private[tools](requestMethod:String,url:String){
   //request body
   private var requestBody:RequestBody = null
 
-  def Header(header:String,value:AnyVal):HttpRequest = Header(header,value.toString)
-  def Header(header:String,value:String) = {
+  def header(headerName:String,value:AnyVal):HttpRequest = header(headerName,value.toString)
+  def header(header:String,value:String):HttpRequest = {
     
     //find any existing value
-    val index = headerValues.findIndexOf( _._1 == header )
+    val index = _headerValues.findIndexOf( _._1 == header )
     
     //handle host first, we don't want to add it to the actual list
     if(Http.Host.equalsIgnoreCase(header))
       hostName = value
     //remove value
     else if(value == null && index != -1)
-      headerValues.remove(index)
+      _headerValues.remove(index)
     //update value
     else if(index != -1)
-      headerValues(index) = (header,value)
+      _headerValues(index) = (header,value)
     //add value
     else if(value != null)
-      headerValues += (header,value)
+      _headerValues += (header,value)
 
     //store special headers
     if(Http.ContentLength.equalsIgnoreCase(header))
-      contentLength = value.parseLong getOrElse -1L
+      _contentLength = value.parseLong getOrElse -1L
     
     this
   }
   
-  def ContentLength(value:Long) = Header(Http.ContentLength,value.toString)
-  def ContentType(value:String) = Header(Http.ContentType,value)
+  def contentLength(value:Long) = header(Http.ContentLength,value.toString)
+  def contentType(value:String) = header(Http.ContentType,value)
   
-  def HeaderValues(values:(String,String)*) = {headerValues ++= values; this}
-  def FormValues(values:(String,String)*) = {formValues ++= values;requestBody = FormValueRequestBody(formValues); this}
-  def QueryValues(values:(String,String)*) = {queryValues ++= values; this}
+  def headerValues(values:(String,String)*) = {_headerValues ++= values; this}
+  def formValues(values:(String,String)*) = {_formValues ++= values;requestBody = FormValueRequestBody(_formValues); this}
+  def queryValues(values:(String,String)*) = {_queryValues ++= values; this}
   
   def context = httpContext
   def context(newContext:HttpContext) = {httpContext = newContext; this}
@@ -116,10 +116,10 @@ class HttpRequest private[tools](requestMethod:String,url:String){
   private def sendRequest(requestReason:String):HttpResponse = {
     
     //build our request
-    val requestUrl = buildUrl(url,queryValues:_*)
+    val requestUrl = buildUrl(url,_queryValues:_*)
     val client = new HttpClient
     val method = requestBody match {
-      case null => new HttpMethodBase(requestUrl){ def getName:String = requestMethod } 
+      case null => new HttpMethodBase(requestUrl){ def getName:String = requestMethod }
       case _ => new EntityEnclosingMethod(requestUrl){
         def getName:String = requestMethod
         setRequestEntity(
@@ -147,7 +147,7 @@ class HttpRequest private[tools](requestMethod:String,url:String){
       client.getHttpConnectionManager.getParams.setSoTimeout(readTimeout)
     
     //set our headers
-    for( (header,value) <- headerValues)
+    for( (header,value) <- _headerValues)
       method.setRequestHeader(header,value)
     
     //configure host name
@@ -283,7 +283,7 @@ class HttpResponse private[tools](method:HttpMethod,bufferResponse:Boolean){
 		return contentType 
   }
   def contentEncoding = parseEncoding(header(Http.ContentType))
-	def contentLength = header(Http.ContentLength).parseInt(-1)
+	def contentLength = header(Http.ContentLength).parseLong(-1L)
   def lastModified = try{ java.util.Date.parse(header(Http.LastModified)) } catch{ case _ => 0L }
   
   private def copyStream[A <: OutputStream](input:InputStream,output:A,bufferSize:Int):A = {
