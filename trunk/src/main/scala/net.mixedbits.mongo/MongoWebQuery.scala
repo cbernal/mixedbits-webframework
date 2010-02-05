@@ -5,6 +5,8 @@ import net.mixedbits.tools.BlockStatements._
 trait MongoWebQuery{
   self:MongoCollection =>
  
+  def hasQueryParameters(parameters:java.util.Map[String,Array[String]]) = 
+    parameters.size > 0
   
   def collectParameters(parameters:java.util.Map[String,Array[String]]):String = {
     val consolidatedCriteria = parameters.get(_paramKey)
@@ -94,16 +96,11 @@ trait MongoWebQuery{
       case "empty" => property == null
       case "notempty" => property != null
     }
-
-    /*
-  def searchForIds(parameters:java.util.Map[String,Array[String]]) =
-    for(constraint <- buildSearchConstraint(parameters))
-      yield getIds(constraint)  
-  
-  def search(parameters:java.util.Map[String,Array[String]]) =
-    for(constraint <- buildSearchConstraint(parameters))
-      yield find(constraint)
-    */
+    
+  def parseQuery(parameters:java.util.Map[String,Array[String]]) = {
+    val criteria = collectParameters(parameters)
+    buildSearchConstraint(criteria).map{ (criteria,_) } getOrElse ("",new MongoConstraintGroup)
+  }
     
   def search(parameters:java.util.Map[String,Array[String]]) = {
     val criteria = collectParameters(parameters)
@@ -111,7 +108,7 @@ trait MongoWebQuery{
       constraint =>
       
       val results = find(constraint)
-      (criteria,results,results.size) 
+      (criteria,results,results.size)
     }
   }
   
