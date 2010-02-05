@@ -41,8 +41,12 @@ class Recaptcha(val publicKey:String, val privateKey:String,theme:Option[String]
     */
   
   def isValid():Boolean = {
-    val request = net.mixedbits.webframework.WebRequest.httpRequest
-    isValid(request.getRemoteAddr,request.getParameter(challengeFieldName),request.getParameter(responseFieldName))
+    val result = for(
+                    challenge <- WebRequest.param(challengeFieldName);
+                    response <- WebRequest.param(responseFieldName)
+                    ) yield isValid(WebRequest.httpRequest.getRemoteAddr,challenge,response)
+                  
+    result getOrElse false
   }
   
   def isValid(clientAddress:String,challenge:String,response:String):Boolean = 

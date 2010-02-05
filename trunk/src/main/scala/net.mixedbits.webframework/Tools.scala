@@ -6,4 +6,6 @@ object Tools{
   type Elements = NodeBuffer
   implicit def elemToNodeBuffer(element:Elem) = 
     new NodeBuffer() &+ element
+  
+  def Elements(elements:Elements) = elements
 }
