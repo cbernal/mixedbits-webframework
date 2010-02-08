@@ -433,9 +433,20 @@ object Passwords{
   def hash(password:String,strength:Int):String = BCrypt.hashpw(password,BCrypt.gensalt(strength))
   def areEqual(password:String,hash:String):Boolean = BCrypt.checkpw(password,hash)
   
-  private val passwordGenerator = new com.Ostermiller.util.RandPass
+  private val numbers = ('0' to '9').toList
+  private val symbols = "!@$*".toList
+  private val alphabet = ('a' to 'z').toList
+  private val upperAlphabet = ('A' to 'Z').toList
   
-  def generate(length:Int):String = passwordGenerator.getPass(length)
+  private val vowels = "aeiou".toList
+  private val consonants = alphabet -- vowels
+  
+  private val defaultPasswordCharacters = numbers ++ symbols ++ alphabet ++ upperAlphabet
+  
+  private val random = new java.security.SecureRandom
+  def generate(length:Int):String = 
+    (for(i <- 1 to length) yield defaultPasswordCharacters(random.nextInt(defaultPasswordCharacters.size))).mkString
+
   def generate(min:Int,max:Int):String = generate(MiscTools.randomInt(min,max))
   def generate():String = generate(6,12)
 }
