@@ -18,6 +18,10 @@ class FileWatcher(files: =>Seq[File]){
           modifiedTimes(file) < file.lastModified    
       ) yield file
   }
+  
+  def currentFiles():Seq[File] = {
+    oldModifiedTimes.keySet.toArray
+  }
 
   def modifiedFiles():Seq[File] = {
     val newFiles = files
