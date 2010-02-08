@@ -155,6 +155,14 @@ object Objects{
 
   def objectPath(o:AnyRef) = o.getClass.getSimpleName.split('$') filter{_!=""}
   def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
+  
+  
+  class ForwardPipe[T] private[Objects](value:T){
+    def |>[R] (f: T => R):R = f(value)
+    def |>> (f: T => Any):T = {f(value);value}
+  }
+  implicit def toForwardPipe[T](value:T) = new ForwardPipe[T](value)
+
 }
 
 
@@ -424,4 +432,10 @@ object Passwords{
   //strength is valid from 4 to 31, 31 is strongest, each increment is twice as much work, 10 is the default value
   def hash(password:String,strength:Int):String = BCrypt.hashpw(password,BCrypt.gensalt(strength))
   def areEqual(password:String,hash:String):Boolean = BCrypt.checkpw(password,hash)
+  
+  private val passwordGenerator = new com.Ostermiller.util.RandPass
+  
+  def generate(length:Int):String = passwordGenerator.getPass(length)
+  def generate(min:Int,max:Int):String = generate(MiscTools.randomInt(min,max))
+  def generate():String = generate(6,12)
 }
