@@ -13,6 +13,7 @@ import org.w3c.dom._
 import org.xml.sax.{SAXException,InputSource}
 
 object Xml{
+
   private lazy val xmlDocumentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()	
 
   def Parse(documentFile:File) = xmlDocumentBuilder.parse(documentFile).getDocumentElement
@@ -55,5 +56,25 @@ object Xml{
   }
   
 	def Text(relativeTo:Node, xpathQuery:String):String = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo)
-
+ 
+  
+  def elem(name:String) = scala.xml.Elem(null,name,null,scala.xml.TopScope,Nil:_*)
+  def attribute(name:String,value:String) = new scala.xml.UnprefixedAttribute(name,value,scala.xml.Null)
+  def attributes(values:(String,String)*):scala.xml.MetaData = {
+    var current:scala.xml.MetaData = null
+    for( (key,value) <- values ){
+      if(current == null)
+        current = attribute(key,value)
+      else
+        current = current.append(attribute(key,value))
+    }
+    current
+  }
+  
+  def attributes(elem:scala.xml.Elem)(values:(String,String)*):scala.xml.Elem = 
+    if(values.size > 0)
+      elem % attributes(values:_*)
+    else
+      elem
+  
 }
