@@ -88,10 +88,11 @@ class JsDocument(baseObject:DBObject,val database:MongoDatabase) extends JsObjec
   def id_=(value:String) = obj.put("_id",MongoTools.marshalId(value))
   
   def collection:String = obj.get("_ns").toString
+
 }
 
 object JsDocument{
-  def apply(updates:MongoUpdate):JsDocument ={
+  def apply(updates:MongoUpdate):JsDocument = {
     val doc = new JsDocument
     updates.applyToObject(doc)
     doc
@@ -100,7 +101,7 @@ object JsDocument{
   object Id extends JsAnyProperty("_id")
   object Namespace extends JsAnyProperty("_ns")
 }
-
+/*
 class JsDbRef(database:MongoDatabase,baseRef:DBRef){
   val ref = baseRef
   def this(database:MongoDatabase,collection:String,id:String) = this(database,new DBRef(database.getDatabase,collection,MongoTools.marshalId(id)))
@@ -111,7 +112,7 @@ class JsDbRef(database:MongoDatabase,baseRef:DBRef){
   
   def fetch() = new JsDocument(ref.fetch().asInstanceOf[BasicDBObject],database)
 }
-
+*/
 class JsArray[T](val list:BasicDBList) extends Seq[T]{
   def this() = this(new BasicDBList)
   
