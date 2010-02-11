@@ -70,6 +70,8 @@ trait MongoWebQuery{
               None
             }
   }
+  
+  def param(property:JsArrayProperty[String]) = arrayParam[String](property) _
     
   def param(property:JsIntProperty) = intParam(property) _
   def param(property:JsDoubleProperty) = doubleParam(property) _
@@ -95,6 +97,11 @@ trait MongoWebQuery{
       case "ne" => property != value
       case "empty" => property == null
       case "notempty" => property != null
+    }
+    
+  def arrayParam[T](property:JsArrayProperty[T])(operation:String, value:T):MongoConstraint =
+    operation match {
+      case "contains" => property contains value
     }
     
   def parseQuery(parameters:java.util.Map[String,Array[String]]) = {
