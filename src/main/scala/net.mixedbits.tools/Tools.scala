@@ -172,7 +172,7 @@ object BlockStatements{
 	  try{ Objects.toOption(f) }
 	  catch{ case _ => None }
 	
-	def default[T](defaultValue:T)(f: =>T):T =
+	def default[T](defaultValue: => T)(f: =>T):T =
     attempt(f) match {
       case Some(value) => value
       case None => defaultValue
