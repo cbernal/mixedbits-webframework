@@ -55,7 +55,7 @@ trait StreamingMultipartRequest{
     StreamingMultipartRequest.onMultipartRequest(onFormField,onFile)
 }
 
-trait BufferedMultipartRequest{
+trait BufferedMultipartRequest extends WebRequest{
   self:WebResponse =>
   
   import java.io._
@@ -72,6 +72,10 @@ trait BufferedMultipartRequest{
   
   def multipartParam(name:String,default:String):String = 
     multipartParam(name) getOrElse default
+  
+  //allow default param method to find multipart params
+  override def param(name:String):Option[String] = 
+    super.param(name) orElse multipartParam(name)
   
   
   /******************
