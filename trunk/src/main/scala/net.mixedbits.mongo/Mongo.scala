@@ -1,6 +1,7 @@
 package net.mixedbits.mongo
 
 import net.mixedbits.tools._
+import net.mixedbits.json._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
@@ -22,17 +23,25 @@ abstract class MongoDatabase(name:String){
   protected def createConnection:Mongo
   lazy val connection = createConnection
   
+  protected def options = {
+    val mongoOptions = new MongoOptions
+    mongoOptions.connectTimeout = 5000 // 5 seconds
+    mongoOptions.socketTimeout = 5000
+    mongoOptions.autoConnectRetry = true
+    mongoOptions
+  }
+  
   protected def server(host:String) = 
-    new Mongo(new DBAddress(host,"test"))
+    new Mongo(new DBAddress(host,"test"),options)
   
   protected def server(host:String,port:Int) = 
-    new Mongo(new DBAddress(host,port,"test"))
+    new Mongo(new DBAddress(host,port,"test"),options)
   
   protected def serverPair(leftHost:String,rightHost:String) = 
-    new Mongo(new DBAddress(leftHost,"test"),new DBAddress(rightHost,"test"))
+    new Mongo(new DBAddress(leftHost,"test"),new DBAddress(rightHost,"test"),options)
   
   protected def serverPair(leftHost:(String,Int),rightHost:(String,Int)) = 
-    new Mongo(new DBAddress(leftHost._1,leftHost._2,"test"),new DBAddress(rightHost._1,rightHost._2,"test"))
+    new Mongo(new DBAddress(leftHost._1,leftHost._2,"test"),new DBAddress(rightHost._1,rightHost._2,"test"),options)
 }
 
 
@@ -43,7 +52,7 @@ object Mongo{
     object Namespace extends JsStringProperty("_ns")
     
     object UpdatedExisting extends JsBooleanProperty("updatedExisting")
-    object DocumentCount extends JsIntProperty("n")
+    object DocumentCount extends JsLongProperty("n")
     object FsyncFilesCount extends JsIntProperty("fsyncFiles")
   }
 }
@@ -53,7 +62,7 @@ object MongoTools{
   def lastError(db:DB) = 
     new JsObject(db.getLastError.asInstanceOf[BasicDBObject])
   
-  def checkBatchDetails(db:DB):Int = {
+  def checkBatchDetails(db:DB):Long = {
     val details = lastError(db)
     
     //throw an exception if there is an error message
@@ -61,13 +70,13 @@ object MongoTools{
       error(details.toJson)
     
     //return the document count, or -1 if it wasn't returned
-    details(Mongo.Error.DocumentCount,-1)
+    details(Mongo.Error.DocumentCount,-1L)
   }
   
   def generateId():String =
     new com.mongodb.ObjectId().toString()
   
-  def marshalId(value:String):Object = {
+  def marshalId(value:String):AnyRef = {
     val objectId = ObjectId.massageToObjectId(value)
     if(objectId!=null)
       objectId

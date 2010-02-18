@@ -1,5 +1,6 @@
 package net.mixedbits.mongo
 
+import net.mixedbits.json._
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.Sequences._
@@ -12,7 +13,7 @@ object SortDirection{
   case object Descending extends SortDirection(-1)
 }
 
-abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constraint:Option[MongoConstraint]) extends Iterable[T]{
+abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constraint:Option[JsConstraint]) extends Iterable[T]{
 
   protected def convertRawObject(rawObject:DBObject):T
   protected lazy val cursor:DBCursor = error("not implemented")
@@ -35,11 +36,11 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
 
 trait MongoUpdatableResultSet[T <: JsDocument]{
   self:MongoResultSet[T] =>
-  def update(updates:MongoUpdate):Int
+  def update(updates:MongoUpdate):Long
   def updateFirst(updates:MongoUpdate):Boolean
   def remove():Any
   
-  protected def updateCollection(collection:MongoCollection)(updates:MongoUpdate):Int = 
+  protected def updateCollection(collection:MongoCollection)(updates:MongoUpdate):Long = 
     collection.usingWriteConnection{
       (db,rawCollection) =>
       rawCollection.update(
@@ -64,7 +65,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
     }
 }
 
-class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[MongoConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
+class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
   protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject,collection.database)
   
   override protected lazy val cursor = {
@@ -176,8 +177,8 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[Mong
 
 }
 
-class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[MongoConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
-  def update(updates:MongoUpdate):Int =
+class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[JsConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
+  def update(updates:MongoUpdate):Long =
     updateCollection(collection)(updates)
   
   def updateFirst(updates:MongoUpdate):Boolean =

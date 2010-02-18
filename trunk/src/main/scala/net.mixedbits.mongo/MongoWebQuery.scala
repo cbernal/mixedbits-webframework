@@ -1,6 +1,7 @@
 package net.mixedbits.mongo
 
 import net.mixedbits.tools.BlockStatements._
+import net.mixedbits.json._
 
 trait MongoWebQuery{
   self:MongoCollection =>
@@ -36,12 +37,12 @@ trait MongoWebQuery{
     result.toString
   }
   
-  def buildSearchConstraint(parameters:java.util.Map[String,Array[String]]):Option[MongoConstraint] = 
+  def buildSearchConstraint(parameters:java.util.Map[String,Array[String]]):Option[JsConstraint] = 
     buildSearchConstraint(collectParameters(parameters))
   
-  def buildSearchConstraint(criteria:String):Option[MongoConstraint] = {
+  def buildSearchConstraint(criteria:String):Option[JsConstraint] = {
     attempt{
-      val constraints = new MongoConstraintGroup
+      val constraints = new JsConstraintGroup
       
       val foundParams = new scala.collection.mutable.ListBuffer[String]
       
@@ -62,7 +63,7 @@ trait MongoWebQuery{
     }
   }
   
-  def extractConstraint(property:String,operation:String,value:String):Option[MongoConstraint] = {
+  def extractConstraint(property:String,operation:String,value:String):Option[JsConstraint] = {
     return {
             if(_queryParameters isDefinedAt property)
               Some(_queryParameters(property)(operation,value))
@@ -77,11 +78,11 @@ trait MongoWebQuery{
   def param(property:JsDoubleProperty) = doubleParam(property) _
   def param(property:JsStringProperty) = stringParam(property) _
 
-  def intParam(property:JsNumberProperty[Int])(operation:String,value:String):MongoConstraint = 
+  def intParam(property:JsNumberProperty[Int])(operation:String,value:String):JsConstraint = 
     numberParam(property,operation,value.toInt)
-  def doubleParam(property:JsNumberProperty[Double])(operation:String,value:String):MongoConstraint = 
+  def doubleParam(property:JsNumberProperty[Double])(operation:String,value:String):JsConstraint = 
     numberParam(property,operation,value.toDouble)
-  def numberParam[T <: AnyVal](property:JsNumberProperty[T], operation:String, value: => T):MongoConstraint =
+  def numberParam[T <: AnyVal](property:JsNumberProperty[T], operation:String, value: => T):JsConstraint =
     operation match {
       case "eq" => property == value
       case "ne" => property != value
@@ -91,7 +92,7 @@ trait MongoWebQuery{
       case "lte" => property <= value
     }
     
-  def stringParam(property:JsProperty[String])(operation:String, value:String):MongoConstraint =
+  def stringParam(property:JsProperty[String])(operation:String, value:String):JsConstraint =
     operation match {
       case "eq" => property == value
       case "ne" => property != value
@@ -99,14 +100,14 @@ trait MongoWebQuery{
       case "notempty" => property != null
     }
     
-  def arrayParam[T](property:JsArrayProperty[T])(operation:String, value:T):MongoConstraint =
+  def arrayParam[T](property:JsArrayProperty[T])(operation:String, value:T):JsConstraint =
     operation match {
       case "contains" => property contains value
     }
     
   def parseQuery(parameters:java.util.Map[String,Array[String]]) = {
     val criteria = collectParameters(parameters)
-    buildSearchConstraint(criteria).map{ (criteria,_) } getOrElse ("",new MongoConstraintGroup)
+    buildSearchConstraint(criteria).map{ (criteria,_) } getOrElse ("",new JsConstraintGroup)
   }
     
   def search(parameters:java.util.Map[String,Array[String]]) = {
@@ -138,9 +139,9 @@ trait MongoWebQuery{
   
   
   private var _paramKey:String = _
-  private var _queryParameters:PartialFunction[String,(String,String)=>MongoConstraint] = _
+  private var _queryParameters:PartialFunction[String,(String,String)=>JsConstraint] = _
   
-  def queryParameters(paramKey:String)(params:PartialFunction[String,(String,String)=>MongoConstraint]){
+  def queryParameters(paramKey:String)(params:PartialFunction[String,(String,String)=>JsConstraint]){
     _paramKey = paramKey
     _queryParameters = params 
   }
