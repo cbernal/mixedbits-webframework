@@ -22,7 +22,7 @@ object SampleApplication extends WebApplication{
 trait DefaultTemplate extends WebPage with WebRequest{
   
   def title = "Sample Web Application"
-  def include = List(
+  override val include = List(
     css("/resources/default.css"),
   //  script("/resources/default.js"),
     googleScriptLoader( ("jquery","1",None)/*,("maps","2",None)*/ )

@@ -50,10 +50,18 @@ trait WebResponse{
   
   def processRequest():Unit
   
-  private val _registeredActions = new ListBuffer[()=>Any]()
-  protected def run[T](action: =>T){ _registeredActions += action _ }
-  def runActions(){
-    for(action <- _registeredActions)
+  private val _beforeActions = new ListBuffer[()=>Any]()
+  protected def run[T](action: =>T){ _beforeActions += action _ }
+  protected def onBefore[T](action: =>T){ _beforeActions += action _ }
+  def runBeforeActions(){
+    for(action <- _beforeActions)
+      action()
+  }
+  
+  private val _afterActions = new ListBuffer[()=>Any]()
+  protected def onAfter[T](action: =>T){ _afterActions += action _ }
+  def runAfterActions(){
+    for(action <- _afterActions)
       action()
   }
 }
