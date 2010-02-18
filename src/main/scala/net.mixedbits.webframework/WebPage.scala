@@ -51,7 +51,7 @@ trait WebPage extends TextResponse{
   def charset = "UTF-8"
   def title:String
   
-  def include:List[IncludeFile]
+  def include:List[IncludeFile] = List()
   
   def contentType = "text/html; charset="+charset
   
@@ -85,7 +85,6 @@ abstract class SimpleRedirect(redirectType: => HttpRedirect,location: => String)
     responseHeader("Location",location)
   }
   def title = "Redirecting to "+location+"..."
-  val include = List()
   
   def body = 
     <h1>{title}</h1>

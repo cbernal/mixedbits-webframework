@@ -54,7 +54,7 @@ trait WebApplication extends Filter{
   private def showPage(page:WebResponse,webPath:WebPathMatch){
     WebRequest.webPath.withValue(webPath) {
       try{
-        page.runActions()
+        page.runBeforeActions()
         page.processRequest()
       }
       catch{
@@ -83,6 +83,9 @@ trait WebApplication extends Filter{
           //detect explicit request for not found page
           showPage(notFoundPage,webPath)
 
+      }
+      finally{
+        page.runAfterActions()
       }
     }
   }
