@@ -1,6 +1,7 @@
 package net.mixedbits.mongo
 
 import net.mixedbits.tools._
+import net.mixedbits.json._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
@@ -79,14 +80,14 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   
   def count() = metadata.count
   
-  def findOne(constraint:MongoConstraint):Option[MongoFile] = 
+  def findOne(constraint:JsConstraint):Option[MongoFile] = 
     Objects.toOption(rawFileSystem.findOne(constraint.buildSearchObject))
       .map(new MongoFile(_,database))
   
   def findAll():MongoFileSystemResultSet = 
     new MongoFileSystemResultSet(this,None)
   
-  def find(constraint:MongoConstraint):MongoFileSystemResultSet = 
+  def find(constraint:JsConstraint):MongoFileSystemResultSet = 
     new MongoFileSystemResultSet(this,constraint)
 
   def listFiles(folder:String):MongoFileSystemResultSet =
@@ -187,7 +188,7 @@ object MongoFileSystem{
   }
 }
 
-class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[MongoConstraint]) extends MongoResultSet[MongoFile](filesystem.metadata,constraint) with MongoUpdatableResultSet[MongoFile]{
+class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[JsConstraint]) extends MongoResultSet[MongoFile](filesystem.metadata,constraint) with MongoUpdatableResultSet[MongoFile]{
   override protected lazy val cursor = 
     filesystem.rawFileSystem.getFileList(constraintToDBObject)
 
@@ -200,8 +201,7 @@ class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[Mong
   protected def convertRawObject(rawObject:DBObject) = 
     new MongoFile(setGridFS(rawObject.asInstanceOf[GridFSDBFile],filesystem.rawFileSystem),filesystem.database)
   
-  
-  def update(updates:MongoUpdate):Int =
+  def update(updates:MongoUpdate):Long =
     updateCollection(filesystem.metadata)(updates)
   
   def updateFirst(updates:MongoUpdate):Boolean =

@@ -1,5 +1,6 @@
 package net.mixedbits.mongo
 
+import net.mixedbits.json._
 import net.mixedbits.tools._
 import net.mixedbits.tools.BlockStatements._
 import java.util.Date
@@ -158,7 +159,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   }
   
   private def nextItem():NextItemResult = {
-    def findAndClaim(criteria:MongoConstraint) = 
+    def findAndClaim(criteria:JsConstraint) = 
       //find items and ensure that they were properly claimed here
       collection.findOne(criteria) match {
         case Some(item) =>

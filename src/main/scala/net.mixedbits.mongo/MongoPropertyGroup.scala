@@ -1,5 +1,6 @@
 package net.mixedbits.mongo
 
+import net.mixedbits.json._
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._

@@ -3,6 +3,7 @@ package net.mixedbits.mongo
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
+import net.mixedbits.json._
 import com.mongodb._
 
 import scala.collection.mutable.ListBuffer
@@ -10,9 +11,9 @@ import scala.collection.mutable.ListBuffer
 trait MongoBaseCollection[T <: JsDocument]{
   def count():Long
   
-  def findOne(constraint:MongoConstraint):Option[T]
+  def findOne(constraint:JsConstraint):Option[T]
   def findAll():MongoResultSet[T] with MongoUpdatableResultSet[T]
-  def find(constraint:MongoConstraint):MongoResultSet[T] with MongoUpdatableResultSet[T]
+  def find(constraint:JsConstraint):MongoResultSet[T] with MongoUpdatableResultSet[T]
   
   def removeById(id:String):Unit
   def remove(doc:T):Unit
@@ -109,19 +110,19 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String) extends M
   def getAllIds():MongoCollectionResultSet =
     findAll().select(JsAnyProperty("_id"))
   
-  def getIds(constraint:MongoConstraint):MongoCollectionResultSet =
+  def getIds(constraint:JsConstraint):MongoCollectionResultSet =
     find(constraint).select(JsAnyProperty("_id"))
   
   def findAll():MongoCollectionUpdateableResultSet =
     new MongoCollectionUpdateableResultSet(this,None)
 
-  def find(constraint:MongoConstraint):MongoCollectionUpdateableResultSet =
+  def find(constraint:JsConstraint):MongoCollectionUpdateableResultSet =
     new MongoCollectionUpdateableResultSet(this,constraint)
   
   def findOne:Option[JsDocument] =
     attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject],database)}
     
-  def findOne(constraint:MongoConstraint):Option[JsDocument] =
+  def findOne(constraint:JsConstraint):Option[JsDocument] =
     usingReadConnection{
       collection=> MongoTools.marshalDocument(collection.findOne(constraint.buildSearchObject),database)
     }
