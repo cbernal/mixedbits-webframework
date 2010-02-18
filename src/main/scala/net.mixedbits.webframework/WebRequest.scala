@@ -13,6 +13,9 @@ object WebRequest{
     Objects.toOption(httpRequest.getParameter(name)).filter(_!="")
   
   def param(name:String,default:String):String = param(name).getOrElse(default)
+  
+  def params(name:String):Array[String] = 
+    httpRequest.getParameterValues(name)
 
   def webApplication = requestContext.value._1
   def servletContext = requestContext.value._2
@@ -33,12 +36,13 @@ trait WebRequest{
  
   def param(name:String) = WebRequest.param(name)
   def param(name:String,default:String):String = param(name).getOrElse(default)
+  def params(name:String):Array[String] = WebRequest.params(name)
   def webpath = WebRequest.webpath
   def queryString = WebRequest.queryString
   def currentPath = WebRequest.currentPath
   def hostName = WebRequest.hostName
   
-  def params = WebRequest.httpRequest.getParameterMap.asInstanceOf[java.util.Map[String,Array[String]]]
+  def rawParams = WebRequest.httpRequest.getParameterMap.asInstanceOf[java.util.Map[String,Array[String]]]
   
 }
 
