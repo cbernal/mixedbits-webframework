@@ -19,12 +19,14 @@ trait MongoBaseCollection[T <: JsDocument]{
   def remove(doc:T):Unit
 }
 
-class MongoCollection(databaseReference: =>MongoDatabase, name:String) extends MongoBaseCollection[JsDocument]{
+class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:JsObject) extends MongoBaseCollection[JsDocument]{
   type IndexLeft = JsProperty[_]
   type IndexRight = (String,List[JsProperty[_]])
   type IndexParam = IndexLeft|IndexRight
   
-  def this(database: => MongoDatabase) = this({database},null)
+  def this(database: => MongoDatabase) = this({database},null,null)
+  def this(database: => MongoDatabase,name:String) = this({database},name,null)
+  def this(database: => MongoDatabase,settings:JsObject) = this({database},null,settings)
   
   val collectionName:String =
     if(name == null)
@@ -32,7 +34,21 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String) extends M
     else
       name
     
-  lazy val database = databaseReference
+  private def init(db:MongoDatabase){
+    db.withDatabase{
+      db =>
+      if(settings!=null && !db.getCollectionNames.contains(collectionName))
+        db.createCollection(collectionName,settings.obj)
+      else
+        db.getCollection(collectionName)
+    }
+  }
+    
+  lazy val database = {
+    val db = databaseReference;
+    init(db);
+    db
+  }
   
   def usingReadConnection[X](f: DBCollection=>X):X = database.withDatabase(db=>f(db.getCollection(collectionName)))
   def usingWriteConnection[X](f: DBCollection=>X):X = database.withDatabase{
