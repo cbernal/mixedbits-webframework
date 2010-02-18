@@ -55,6 +55,14 @@ object Mongo{
     object DocumentCount extends JsLongProperty("n")
     object FsyncFilesCount extends JsIntProperty("fsyncFiles")
   }
+  
+  object Collection{
+    object Capped extends JsBooleanProperty("capped")
+    object ObjectLimit extends JsIntProperty("max")
+    object SizeLimit extends JsIntProperty("size")
+    
+    object AutoIndexId extends JsBooleanProperty("autoIndexId")
+  }
 }
 
 object MongoTools{
