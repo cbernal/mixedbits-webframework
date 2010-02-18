@@ -14,6 +14,8 @@ object Numbers{
 
 object Strings{
   implicit def stringExtensions(value:String) = new StringExtensions(value)
+  
+  def generateGuid() = java.util.UUID.randomUUID.toString 
 }
 
 object Sequences{
@@ -99,9 +101,15 @@ object Files{
     result
   }
   
-  def tempFolder(name:String):File = {
-    val result = new File(tempFolder,name)
+  def tempFolder(remaining:String*):File = {
+    val result = path(tempFolder,remaining:_*)
     result.mkdirs
+    result
+  }
+  
+  def tempFile(remaining:String*):File = {
+    val result = path(tempFolder,remaining:_*)
+    result.getParentFile.mkdirs
     result
   }
   
@@ -153,8 +161,13 @@ object Objects{
     else
       Some(value)
 
-  def objectPath(o:AnyRef) = o.getClass.getSimpleName.split('$') filter{_!=""}
+    
+  private def classNameParts(name:String) = name.split('$') filter{_!=""}
+  
+  def objectPath(o:AnyRef) = classNameParts(o.getClass.getSimpleName)
   def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
+  
+  def className(o:AnyRef) = classNameParts(o.getClass.getName) mkString "."
   
   
   class ForwardPipe[T] private[Objects](value:T){
@@ -371,6 +384,21 @@ object IO{
     input
   }
   
+  val defaultBufferSize = 1024*16 // 16k
+  
+  def using[T <: Closeable,R](closeable:T)(body: T=>R):R = {
+    try{
+      body(closeable)
+    }
+    finally{
+      if(closeable!=null)
+        closeable.close()
+    }
+  }
+  
+  def pipeStream(inputStream:InputStream,outputStream:OutputStream):Unit = 
+    pipeStream(inputStream,outputStream,defaultBufferSize)
+  
   def pipeStream(inputStream:InputStream,outputStream:OutputStream,bufferSize:Int){
 		val buffer = new Array[Byte](bufferSize)
 		var readCount = inputStream.read(buffer,0,bufferSize)
@@ -386,7 +414,7 @@ object IO{
   
   def readAllText(inputStream:InputStream,encoding:String):String = {
     val outputStream = new ByteArrayOutputStream
-    pipeStream(inputStream,outputStream,1024*16)
+    pipeStream(inputStream,outputStream)
     outputStream.toString(encoding)
   }
 }
