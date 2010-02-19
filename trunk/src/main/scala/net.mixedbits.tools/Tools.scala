@@ -9,7 +9,9 @@ import BlockStatements._
 import org.scala_tools.time.Imports._
 
 object Numbers{
-  implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)  
+  implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)
+  def randomInt(minValue:Int,maxValue:Int):Int = 
+    MiscTools.randomInt(minValue,maxValue)
 }
 
 object Strings{
