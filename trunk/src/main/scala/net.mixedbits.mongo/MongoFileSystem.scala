@@ -46,13 +46,13 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   lazy val metadata = new MongoCollection(database,collectionName+".files")
   lazy val chunks = new MongoCollection(database,collectionName+".chunks")
   
-  def store(source:java.io.File, path:String, updates:MongoUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
+  def store(source:java.io.File, path:String, updates:JsUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
   def store(source:java.io.File, path:String) = storeFile(rawFileSystem.createFile(source),path,None)
   
-  def store(source:java.io.InputStream, path:String, updates:MongoUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
+  def store(source:java.io.InputStream, path:String, updates:JsUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
   def store(source:java.io.InputStream, path:String) = storeFile(rawFileSystem.createFile(source),path,None)
   
-  private def storeFile(inputFile:gridfs.GridFSInputFile, path:String, updates:Option[MongoUpdate]){
+  private def storeFile(inputFile:gridfs.GridFSInputFile, path:String, updates:Option[JsUpdate]){
     //remove any existing files with this path...
     removeFile(path)
     
@@ -201,17 +201,17 @@ class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[JsCo
   protected def convertRawObject(rawObject:DBObject) = 
     new MongoFile(setGridFS(rawObject.asInstanceOf[GridFSDBFile],filesystem.rawFileSystem),filesystem.database)
   
-  def update(updates:MongoUpdate):Long =
+  def update(updates:JsUpdate):Long =
     updateCollection(filesystem.metadata)(updates)
   
-  def updateFirst(updates:MongoUpdate):Boolean =
+  def updateFirst(updates:JsUpdate):Boolean =
     updateCollectionFirst(filesystem.metadata)(updates)
   
   def remove() = 
     filesystem.rawFileSystem.remove(constraintToDBObject)
 }
 
-class MongoFile(baseObject:GridFSDBFile,database:MongoDatabase) extends JsDocument(baseObject,database){
+class MongoFile(baseObject:GridFSDBFile,val database:MongoDatabase) extends JsDocument(baseObject){
   private lazy val pathParts = MongoFileSystem.splitParts(path)
   def folder() = pathParts._1
   def name() = pathParts._2

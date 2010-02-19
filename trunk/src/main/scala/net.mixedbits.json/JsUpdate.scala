@@ -1,38 +1,38 @@
-package net.mixedbits.mongo
+package net.mixedbits.json
 
-import net.mixedbits.json._
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
+
 import com.mongodb._
 
 import scala.collection.mutable.ListBuffer
 
-abstract class MongoUpdate{
-  def &&(update:MongoUpdate) = this and update
-  def and(update:Option[MongoUpdate]):MongoUpdateGroup = 
-    update.map(new MongoUpdateGroup(this,_)).getOrElse(new MongoUpdateGroup(this))
-  def and(update:MongoUpdate):MongoUpdateGroup = new MongoUpdateGroup(this,update)
+abstract class JsUpdate{
+  def &&(update:JsUpdate) = this and update
+  def and(update:Option[JsUpdate]):JsUpdateGroup = 
+    update.map(new JsUpdateGroup(this,_)).getOrElse(new JsUpdateGroup(this))
+  def and(update:JsUpdate):JsUpdateGroup = new JsUpdateGroup(this,update)
   def applyToObject(obj:JsObject):JsObject
   def buildUpdateObject:BasicDBObject = applyToUpdateObject(new BasicDBObject)
   def applyToUpdateObject(obj:BasicDBObject):BasicDBObject
   override def toString = buildUpdateObject.toString
 }
-      
-class MongoUpdateGroup extends MongoUpdate{
-  def this(a:MongoUpdate) = {
+
+class JsUpdateGroup extends JsUpdate{
+  def this(a:JsUpdate) = {
     this()
     updates += a
   }
-  def this(a:MongoUpdate,b:MongoUpdate) = {
+  def this(a:JsUpdate,b:JsUpdate) = {
     this()
     updates += a
     updates += b
   }
   
-  protected val updates = new ListBuffer[MongoUpdate]
+  protected val updates = new ListBuffer[JsUpdate]
   
-  override def and(update:MongoUpdate):MongoUpdateGroup = {
+  override def and(update:JsUpdate):JsUpdateGroup = {
     updates += update
     this
   }
@@ -50,7 +50,7 @@ class MongoUpdateGroup extends MongoUpdate{
   }
 }
 
-class MongoPropertyUpdate(key:String,operation:String,value:Any,applicator:JsObject=>Any) extends MongoUpdate{
+class JsPropertyUpdate(key:String,operation:String,value:Any,applicator:JsObject=>Any) extends JsUpdate{
   def applyToObject(obj:JsObject) = {applicator(obj);obj}
   def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
     

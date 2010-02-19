@@ -15,9 +15,9 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   def this(collection:MongoBaseCollection[T],parent:JsProperty[_]) = {this(collection);propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(collection:MongoBaseCollection[T],parent:JsProperty[_],name:String) = {this(collection);propertyName(parent.propertyName+"."+name)}
   
-  sealed abstract class MongoQueueResult(val updates:Option[MongoUpdate],val processTime:Option[DateTime])
-  case class UpdateItem(newUpdates:MongoUpdate) extends MongoQueueResult(Some(newUpdates),None)
-  case class UpdateAndEnqueueItem(newUpdates:MongoUpdate,newProcessTime:DateTime) extends MongoQueueResult(Some(newUpdates),Some(newProcessTime))
+  sealed abstract class MongoQueueResult(val updates:Option[JsUpdate],val processTime:Option[DateTime])
+  case class UpdateItem(newUpdates:JsUpdate) extends MongoQueueResult(Some(newUpdates),None)
+  case class UpdateAndEnqueueItem(newUpdates:JsUpdate,newProcessTime:DateTime) extends MongoQueueResult(Some(newUpdates),Some(newProcessTime))
   case class EnqueueItem(newProcessTime:DateTime) extends MongoQueueResult(None,Some(newProcessTime))
   case object RemoveItem extends MongoQueueResult(None,None)
   case object ProcessingComplete extends MongoQueueResult(None,None)
@@ -169,7 +169,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
                               uniqueId <- item(queue.UniqueId);
                               updated = collection.find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
                                               .updateFirst(
-                                                  queue.UniqueId <~ MongoTools.generateId() and
+                                                  queue.UniqueId <~ JsTools.generateId() and
                                                   ClaimedBy <~ serverName and
                                                   LastStarted <~ new Date() and
                                                   LastFinished <~ None
@@ -222,7 +222,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
     processItemResult(item,result,0)
   
   private def processItemResult(item:T,result:MongoQueueResult,attempt:Int){
-    def updateItem(updates:MongoUpdate) = 
+    def updateItem(updates:JsUpdate) = 
       for(itemId <- item(JsDocument.Id))
         yield collection.find(JsDocument.Id == itemId and ClaimedBy == serverName)
           .updateFirst(updates)
@@ -245,7 +245,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
         case results =>
           //all other cases
           val newValues = results.updates
-          val newProcessTime = results.processTime.map(ScheduledTime <~ _.toDate and queue.UniqueId <~ MongoTools.generateId)
+          val newProcessTime = results.processTime.map(ScheduledTime <~ _.toDate and queue.UniqueId <~ JsTools.generateId)
           
           //make sure we have an id, make sure we claimed the item, and then mark it as processed and apply the users requested changes
           updateItem(ScheduledTime <~ None and ClaimedBy <~ None and LastFinished <~ new Date() and TimesProcessed + 1 and newValues and newProcessTime) match {
@@ -279,10 +279,10 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
     result getOrElse false
   }
   
-  def enqueue():MongoUpdate = 
+  def enqueue():JsUpdate = 
     enqueue(DateTime.now)
-  def enqueue(processTime:DateTime):MongoUpdate = 
-    ScheduledTime <~ processTime.toDate and queue.UniqueId <~ MongoTools.generateId and ClaimedBy <~ None
+  def enqueue(processTime:DateTime):JsUpdate = 
+    ScheduledTime <~ processTime.toDate and queue.UniqueId <~ JsTools.generateId and ClaimedBy <~ None
   
   def onItemSelected(item:T):MongoQueueResult
   

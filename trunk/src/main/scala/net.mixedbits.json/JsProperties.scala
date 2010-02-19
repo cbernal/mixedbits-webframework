@@ -1,20 +1,21 @@
 package net.mixedbits.json
 
 import java.util.Date
+
 import net.mixedbits.tools._
-import net.mixedbits.mongo._
 import net.mixedbits.tools.Numbers._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
+
 import com.mongodb._
 
-trait JsProperty[T]{
+sealed trait JsProperty[T]{
   //data reading / writing
   def resolveObject(start:DBObject,create:Boolean):DBObject =
-    MongoTools.resolveObject(start,create,propertyPath)
+    JsTools.resolveObject(start,create,propertyPath)
   
   def putUncheckedValue[X](start:DBObject,value:X):X = {
-    resolveObject(start,true).put(shortName,MongoTools.rawValue(value))
+    resolveObject(start,true).put(shortName,JsTools.rawValue(value))
     value
   }
   
@@ -80,23 +81,18 @@ trait JsProperty[T]{
   
   
   //update operators
-  def <~ (value:T):MongoUpdate = 
-    new MongoPropertyUpdate(this.propertyName,"$set",value,(obj=> obj(this) = value))
+  def <~ (value:T):JsUpdate = 
+    new JsPropertyUpdate(this.propertyName,"$set",value,(obj=> obj(this) = value))
   
-  def <~ (value:Option[T]):MongoUpdate = value match {
-    case Some(v) => new MongoPropertyUpdate(this.propertyName,"$set",v,(obj=> obj(this) = v))
-    case None => new MongoPropertyUpdate(this.propertyName,"$set",null,(obj=> obj(this) = None))//new MongoPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
+  def <~ (value:Option[T]):JsUpdate = value match {
+    case Some(v) => new JsPropertyUpdate(this.propertyName,"$set",v,(obj=> obj(this) = v))
+    case None => new JsPropertyUpdate(this.propertyName,"$set",null,(obj=> obj(this) = None))//new JsPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
   }
   
   override def toString() = "JsProperty("+propertyName+")"
 
 }
 
-class JsSelectableProperty extends JsProperty[Nothing]{
-  def this(name:String) = {this();propertyName(name)}
-  def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
-  def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
-}
 /*
 class JsIdProperty extends JsProperty[String]{
   def this(name:String) = {this();propertyName(name)}
@@ -130,30 +126,30 @@ class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
   def contains(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"",value)
   def containsAll(values:Seq[T]):JsConstraint = new JsPropertyConstraint(propertyName,"$all",JsArray(values).list)
   
-  def +(value:T):MongoUpdate = this += value
-  def ++(value:Seq[T]):MongoUpdate = this ++= value
+  def +(value:T):JsUpdate = this += value
+  def ++(value:Seq[T]):JsUpdate = this ++= value
   
-  def -(value:T):MongoUpdate = this -= value
-  def --(value:Seq[T]):MongoUpdate = this ++= value
+  def -(value:T):JsUpdate = this -= value
+  def --(value:Seq[T]):JsUpdate = this ++= value
   
-  def +=(value:T):MongoUpdate =
-    new MongoPropertyUpdate(
+  def +=(value:T):JsUpdate =
+    new JsPropertyUpdate(
       propertyName,"$push",value,
       (obj=> obj(this) += value)
       )
-  def ++=(value:Seq[T]):MongoUpdate =
-    new MongoPropertyUpdate(
+  def ++=(value:Seq[T]):JsUpdate =
+    new JsPropertyUpdate(
       propertyName,"$pushAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value),
       (obj=> obj(this) ++= value)
       )
     
-  def -=(value:T):MongoUpdate =
-    new MongoPropertyUpdate(
+  def -=(value:T):JsUpdate =
+    new JsPropertyUpdate(
       propertyName,"$pull",value,
       (obj=> obj(this) -= value)
       )
-  def --=(value:Seq[T]):MongoUpdate =
-    new MongoPropertyUpdate(
+  def --=(value:Seq[T]):JsUpdate =
+    new JsPropertyUpdate(
       propertyName,"$pullAll",if(value.isInstanceOf[JsArray[_]]) value else JsArray(value),
       (obj=> obj(this) --= value)
       )
@@ -183,20 +179,20 @@ abstract class JsOrderedProperty[T] extends JsProperty[T]{
 }
 
 abstract class JsNumberProperty[T <: AnyVal] extends JsOrderedProperty[T]{
-  def +(value:T):MongoUpdate = this += value
-  def -(value:T):MongoUpdate = this -= value
-  def +=(value:T):MongoUpdate
-  def -=(value:T):MongoUpdate
+  def +(value:T):JsUpdate = this += value
+  def -(value:T):JsUpdate = this -= value
+  def +=(value:T):JsUpdate
+  def -=(value:T):JsUpdate
 }
 
 class JsIntProperty extends JsNumberProperty[Int]{
   def this(name:String) = {this();propertyName(name)}
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
-  def +=(value:Int):MongoUpdate =
-    new MongoPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
-  def -=(value:Int):MongoUpdate = 
-    new MongoPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
+  def +=(value:Int):JsUpdate =
+    new JsPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
+  def -=(value:Int):JsUpdate = 
+    new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
   override def fromString(value:String) = value.parseInt
 }
@@ -205,20 +201,20 @@ class JsLongProperty extends JsNumberProperty[Long]{
   def this(name:String) = {this();propertyName(name)}
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
-  def +=(value:Long):MongoUpdate =
-    new MongoPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
-  def -=(value:Long):MongoUpdate = 
-    new MongoPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
+  def +=(value:Long):JsUpdate =
+    new JsPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
+  def -=(value:Long):JsUpdate = 
+    new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
   override def fromString(value:String) = value.parseLong
 }
 
 class JsDoubleProperty extends JsNumberProperty[Double]{
   def this(name:String) = {this();propertyName(name)}
-  def +=(value:Double):MongoUpdate =
-    new MongoPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
-  def -=(value:Double):MongoUpdate = 
-    new MongoPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
+  def +=(value:Double):JsUpdate =
+    new JsPropertyUpdate(propertyName,"$inc",value,(obj => for(orig <- obj(this)) obj(this) = orig+value))
+  def -=(value:Double):JsUpdate = 
+    new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
   override def fromString(value:String) = value.parseDouble
 }
@@ -231,7 +227,6 @@ class JsDateProperty extends JsOrderedProperty[Date]{
 
 //simple runtime definition of properties
 object JsAnyProperty{ def apply(name:String) = new JsAnyProperty(name) }
-object JsSelectableProperty{ def apply(name:String) = new JsSelectableProperty(name) }
 object JsObjectProperty{ def apply(name:String) = new JsObjectProperty(name) }
 object JsStringProperty{ def apply(name:String) = new JsStringProperty(name) }
 object JsBooleanProperty{ def apply(name:String) = new JsBooleanProperty(name) }
