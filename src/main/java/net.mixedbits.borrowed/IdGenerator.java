@@ -149,7 +149,7 @@ public class IdGenerator
                 }
             }
 
-            System.out.println("Using MessageDigest: " + digest.getAlgorithm());
+            //System.out.println("Using MessageDigest: " + digest.getAlgorithm());
         }
 
         return digest;
