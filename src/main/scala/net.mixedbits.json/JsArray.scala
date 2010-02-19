@@ -3,11 +3,9 @@ package net.mixedbits.json
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
-import net.mixedbits.mongo._
+
 import com.mongodb._
 import com.mongodb.util._
-
-
 
 class JsArray[T](val list:BasicDBList) extends Seq[T]{
   def this() = this(new BasicDBList)

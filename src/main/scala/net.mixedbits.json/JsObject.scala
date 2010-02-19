@@ -3,7 +3,7 @@ package net.mixedbits.json
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
-import net.mixedbits.mongo._
+
 import com.mongodb._
 import com.mongodb.util._
 
@@ -19,7 +19,7 @@ class JsObject(baseObject:DBObject){
   
   val obj:DBObject = baseObject
   
-  def apply(updates:MongoUpdate):this.type = {
+  def apply(updates:JsUpdate):this.type = {
     updates.applyToObject(this)
     this
   }
@@ -41,7 +41,7 @@ class JsObject(baseObject:DBObject){
     this
   }
   def update[T](propertyName:String,value:T):this.type = {
-    obj.put(propertyName,MongoTools.rawValue(value))
+    obj.put(propertyName,JsTools.rawValue(value))
     this
   }
 
@@ -68,7 +68,7 @@ class JsObject(baseObject:DBObject){
 }
 
 object JsObject{
-  def apply(updates:MongoUpdate):JsObject = 
+  def apply(updates:JsUpdate):JsObject = 
     updates.applyToObject(new JsObject)
   
   def apply() = new JsObject

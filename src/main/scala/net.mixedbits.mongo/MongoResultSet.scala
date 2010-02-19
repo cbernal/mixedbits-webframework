@@ -36,11 +36,11 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
 
 trait MongoUpdatableResultSet[T <: JsDocument]{
   self:MongoResultSet[T] =>
-  def update(updates:MongoUpdate):Long
-  def updateFirst(updates:MongoUpdate):Boolean
+  def update(updates:JsUpdate):Long
+  def updateFirst(updates:JsUpdate):Boolean
   def remove():Any
   
-  protected def updateCollection(collection:MongoCollection)(updates:MongoUpdate):Long = 
+  protected def updateCollection(collection:MongoCollection)(updates:JsUpdate):Long = 
     collection.usingWriteConnection{
       (db,rawCollection) =>
       rawCollection.update(
@@ -53,7 +53,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
       MongoTools.checkBatchDetails(db)
     }
     
-  protected def updateCollectionFirst(collection:MongoCollection)(updates:MongoUpdate):Boolean = 
+  protected def updateCollectionFirst(collection:MongoCollection)(updates:JsUpdate):Boolean = 
     collection.usingWriteConnection{
       (db,rawCollection) =>
       rawCollection.update(
@@ -66,7 +66,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
 }
 
 class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
-  protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject,collection.database)
+  protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject)
   
   override protected lazy val cursor = {
     collection.usingReadConnection{
@@ -178,10 +178,10 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
 }
 
 class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[JsConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
-  def update(updates:MongoUpdate):Long =
+  def update(updates:JsUpdate):Long =
     updateCollection(collection)(updates)
   
-  def updateFirst(updates:MongoUpdate):Boolean =
+  def updateFirst(updates:JsUpdate):Boolean =
     updateCollectionFirst(collection)(updates)
     
   def remove() = 

@@ -3,30 +3,27 @@ package net.mixedbits.json
 import net.mixedbits.tools._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
-import net.mixedbits.mongo._
+
 import com.mongodb._
 import com.mongodb.util._
 
-
-
-class JsDocument(baseObject:DBObject,val database:MongoDatabase) extends JsObject(baseObject){
+class JsDocument(baseObject:DBObject) extends JsObject(baseObject){
   
-  def this() = this(new BasicDBObject,null)
-  //def this(baseObject:BasicDBObject) = this(baseObject,null)
+  def this() = this(new BasicDBObject)
   def this(id:String) = {
     this()
     this.id = id
   }
   
   def id:String = toOption(obj.get("_id")).map(_.toString).getOrElse("")
-  def id_=(value:String) = obj.put("_id",MongoTools.marshalId(value))
+  def id_=(value:String) = obj.put("_id",JsTools.marshalId(value))
   
   def collection:String = toOption(obj.get("_ns")).map(_.toString).getOrElse("")
 
 }
 
 object JsDocument{
-  def apply(updates:MongoUpdate):JsDocument = {
+  def apply(updates:JsUpdate):JsDocument = {
     val doc = new JsDocument
     updates.applyToObject(doc)
     doc

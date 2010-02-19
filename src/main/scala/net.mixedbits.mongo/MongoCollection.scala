@@ -136,16 +136,16 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     new MongoCollectionUpdateableResultSet(this,constraint)
   
   def findOne:Option[JsDocument] =
-    attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject],database)}
+    attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject])}
     
   def findOne(constraint:JsConstraint):Option[JsDocument] =
     usingReadConnection{
-      collection=> MongoTools.marshalDocument(collection.findOne(constraint.buildSearchObject),database)
+      collection=> MongoTools.marshalDocument(collection.findOne(constraint.buildSearchObject))
     }
     
   def getById(id:String):Option[JsDocument] =
     usingReadConnection{
-      collection=> MongoTools.marshalDocument(collection.findOne(new JsDocument(id).obj),database)
+      collection=> MongoTools.marshalDocument(collection.findOne(new JsDocument(id).obj))
     }
 
   def removeById(id:String){usingWriteConnection{_.remove(new JsDocument(id).obj)}}
@@ -154,10 +154,10 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
   
   def save(doc:JsDocument) = usingWriteConnection{_.save(doc.obj)}
   
-  def insert(update:MongoUpdate):Boolean = 
-    insert(MongoTools.generateId())(update)
+  def insert(update:JsUpdate):Boolean = 
+    insert(JsTools.generateId())(update)
   
-  def insert(id:String)(update:MongoUpdate):Boolean = 
+  def insert(id:String)(update:JsUpdate):Boolean = 
     usingWriteConnection{
     (db,rawCollection) =>
     rawCollection.update(

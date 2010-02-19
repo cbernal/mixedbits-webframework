@@ -30,7 +30,7 @@ trait MongoSessionProvider extends CustomSessionProvider[JsDocument]{
   protected def sessionValueForId(id:String):Option[JsDocument] = {
     sessionCollection.findOne(JsDocument.Id == id and IsValidSession == true) match {
       //restore the existing original document id
-      case Some(doc) => Some(doc(JsDocument.Id <~ MongoTools.marshalId(doc(OriginalDocumentId,""))))
+      case Some(doc) => Some(doc(JsDocument.Id <~ JsTools.marshalId(doc(OriginalDocumentId,""))))
       case None => None
     }
   }

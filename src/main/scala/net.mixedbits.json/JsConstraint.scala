@@ -1,13 +1,12 @@
 package net.mixedbits.json
 
 import net.mixedbits.tools._
-import net.mixedbits.mongo._
 import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
+
 import com.mongodb._
 
 import scala.collection.mutable.ListBuffer
-
 
 abstract class JsConstraint{
   def &&(constraint:JsConstraint) = this and constraint
