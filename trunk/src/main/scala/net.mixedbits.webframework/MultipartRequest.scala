@@ -89,7 +89,7 @@ trait BufferedMultipartRequest extends WebRequest{
   private def buffer(file:MultipartFile):MultipartBufferedFile = {
     val tempFile = Files.tempFile(Objects.className(this),tempFolderName,Strings.generateGuid)
     
-    IO.using(new FileOutputStream(tempFile)){ output => 
+    IO.using(new FileOutputStream(tempFile)){ output =>
       IO.pipeStream(file.stream,output)
     }
     
@@ -122,6 +122,8 @@ trait BufferedMultipartRequest extends WebRequest{
     for(value <- formFiles.values; if value.file.exists)
       if(!value.file.delete())
         value.file.deleteOnExit()
+      
+    multipartParams.value = null
   }
   
 }
