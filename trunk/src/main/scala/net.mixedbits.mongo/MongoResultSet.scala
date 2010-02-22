@@ -146,7 +146,7 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
     new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,sortBy ++ List( (newSortBy,direction) ))
     
 
-  def distinct[T](property:JsProperty[T]):Seq[T] = 
+  def distinct[T](property:JsProperty[T]):List[T] = 
     collection.usingReadConnection{
       connection => 
       {
