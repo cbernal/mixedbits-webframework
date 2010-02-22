@@ -14,8 +14,13 @@ object WebRequest{
   
   def param(name:String,default:String):String = param(name).getOrElse(default)
   
-  def params(name:String):Array[String] = 
-    httpRequest.getParameterValues(name)
+  def params(name:String):Array[String] = {
+    val values = httpRequest.getParameterValues(name)
+    if(values == null)
+      Array[String]()
+    else
+      values
+  }
 
   def webApplication = requestContext.value._1
   def servletContext = requestContext.value._2
