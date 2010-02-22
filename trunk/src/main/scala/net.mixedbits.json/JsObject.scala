@@ -48,11 +48,7 @@ class JsObject(baseObject:DBObject){
   def apply[T](property:JsArrayProperty[T]):JsArray[T] = {
     property.readUncheckedValue(obj) match {
       case Some(list) => new JsArray[T](list)
-      case None => {
-        val result = new JsArray[T]
-        property.putUncheckedValue(obj,result.list)
-        result
-      }
+      case None => new JsPhantomArray(this,property)
     }
   }
   def update[T](property:JsArrayProperty[T],value:JsArray[T]):this.type = {
