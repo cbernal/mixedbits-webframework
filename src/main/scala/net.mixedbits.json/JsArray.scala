@@ -62,6 +62,16 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
   
   def toJson():String = list.toString
 }
+
+class JsPhantomArray[T](obj:JsObject,property:JsArrayProperty[T]) extends JsArray[T](new BasicDBList){
+  override def +=(value:T) = {
+    if(!property.isDefinedOnObject(obj.obj))
+      property.putUncheckedValue(obj.obj,this.list)
+    
+    super.+=(value)
+  }
+}
+
 object JsArray{
   def apply[T](firstValue:T,values:T*) = new JsArray[T].add(firstValue,values:_*)
   
