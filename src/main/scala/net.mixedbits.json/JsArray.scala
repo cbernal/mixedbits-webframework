@@ -48,13 +48,21 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
     this
   }
   
-  def +=(value:T) =
+
+  def +=(value:T):Boolean =
     if(value.isInstanceOf[JsObject])
       list.add(value.asInstanceOf[JsObject].obj)
     else if(value.isInstanceOf[JsArray[_]])
       list.add(value.asInstanceOf[JsArray[_]].list)
     else
       list.add(value.asInstanceOf[AnyRef])
+    
+  def +=(value:Option[T]):Boolean = 
+    value match {
+      case Some(v) => this += v
+      case None => false
+    }
+  
 
   def -=(value:T){ while(list contains value){list.remove(value)} }
   
