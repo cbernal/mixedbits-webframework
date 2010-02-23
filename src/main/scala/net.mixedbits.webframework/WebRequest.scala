@@ -3,7 +3,7 @@ package net.mixedbits.webframework
 object WebRequest{
   import scala.util.DynamicVariable
   import javax.servlet.{ServletContext,http}
-  import javax.servlet.http.{HttpServletRequest,HttpServletResponse}
+  import javax.servlet.http.{HttpServletRequest,HttpServletResponse,Cookie}
   import net.mixedbits.tools._
   
   val requestContext = new DynamicVariable[(WebApplication,ServletContext,HttpServletRequest,HttpServletResponse)](null)
@@ -22,6 +22,13 @@ object WebRequest{
       values
   }
 
+  def cookies = Objects.toOption( httpRequest.getCookies ) getOrElse Array[Cookie]()
+  def cookie(name:String):Option[Cookie] = {
+    for(cookie <- WebRequest.cookies if(cookie.getName.equals(name) && cookie.getValue!=""))
+      return Some(cookie)
+    None
+  }
+  
   def webApplication = requestContext.value._1
   def servletContext = requestContext.value._2
   def httpRequest = requestContext.value._3
