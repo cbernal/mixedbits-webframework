@@ -59,22 +59,22 @@ trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
   }
 
   def currentSessionId():Option[String] = {
+    //look for id in cache
     val cachedId = _currentSessionId.value
     if(cachedId != null)
       return Some(cachedId)
     
+    //look for id in query
     if(querySessionIdEnabled)
       for(sessionId <- WebRequest.param(sessionCookieName))
         return Some(sessionId)
-
-    val cookies = WebRequest.httpRequest.getCookies
     
-    for(cookie <- cookies if(cookie.getName.equals(sessionCookieName) && cookie.getValue!="")){
-      _currentSessionId.value = cookie.getValue
-      return Some(cookie.getValue)
-    }
-
-    None
+    //look for id in cookies
+    for(cookie <- WebRequest.cookie(sessionCookieName))
+      yield {
+        _currentSessionId.value = cookie.getValue
+        cookie.getValue
+      }
   }
 
   def destroyCurrentSession(){
@@ -92,24 +92,21 @@ trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
   }
 
   def currentSessionValue:Option[T] = {
+    //check cache
     val cachedValue = _currentSessionValue.value
     if(cachedValue != null)
       return Some(cachedValue)
     
-    currentSessionId match {
-      case Some(sessionId) =>
-        sessionValueForId(sessionId) match {
-          case Some(sessionValue) => 
-            _currentSessionValue.value = sessionValue
-            Some(sessionValue)
-          case None => None
-        }
-      case None => None
-    }
+    //check session store
+    for(sessionId <- currentSessionId; sessionValue <- sessionValueForId(sessionId))
+      yield {
+        _currentSessionValue.value = sessionValue
+        sessionValue
+      }
   }
   
   def hasCurrentSession():Boolean = 
-    currentSessionValue match { //this will potentially do something expensive, maybe we should use currentSessionId instead...
+    currentSessionValue match {
       case Some(_) => true
       case None => false
     }
