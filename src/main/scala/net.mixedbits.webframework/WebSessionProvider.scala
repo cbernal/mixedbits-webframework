@@ -1,6 +1,6 @@
 package net.mixedbits.webframework
 
-trait WebSessionProvider[T >: Null]{
+trait WebSessionProvider[T <: AnyRef]{
   
   //pass a value and return a session id
   def createSession(value:T):String
@@ -16,7 +16,7 @@ trait WebSessionProvider[T >: Null]{
   def onRequestEnd(){}
 }
 
-trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
+trait CustomSessionProvider[T <: AnyRef] extends WebSessionProvider[T]{
   import net.mixedbits.tools._
   import javax.servlet.http.Cookie
   import scala.util.DynamicVariable
@@ -33,7 +33,7 @@ trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
   protected def generateSessionId():String =
     _idGenerator.generateId(Numbers.randomInt(16,32))
   
-  private val _currentSessionValue = new DynamicVariable[T](null)
+  private val _currentSessionValue = new DynamicVariable[T](null.asInstanceOf[T])
   private val _currentSessionId = new DynamicVariable[String](null)
   
   private def sessionCookie(value:String,age:Int):Cookie = {
@@ -80,7 +80,7 @@ trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
   def destroyCurrentSession(){
     for(sessionId <- currentSessionId){
       //remove local caches
-      _currentSessionValue.value = null
+      _currentSessionValue.value = null.asInstanceOf[T]
       _currentSessionId.value = null
       
       //remove the value, and expire immediately
@@ -112,7 +112,7 @@ trait CustomSessionProvider[T >: Null] extends WebSessionProvider[T]{
     }
     
   override def onRequestEnd(){
-    _currentSessionValue.value = null
+    _currentSessionValue.value = null.asInstanceOf[T]
     _currentSessionId.value = null
   }
 }

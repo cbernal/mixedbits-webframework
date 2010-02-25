@@ -2,7 +2,7 @@ package net.mixedbits.webframework
 
 import net.mixedbits.tools._
 
-trait MemorySessionProvider[T >: Null] extends WebSessionProvider[T]{
+trait MemorySessionProvider[T <: AnyRef] extends WebSessionProvider[T]{
   
   val sessionValueKey = "MemorySessionProvider:Value" 
   

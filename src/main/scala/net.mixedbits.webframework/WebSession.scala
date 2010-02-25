@@ -1,6 +1,6 @@
 package net.mixedbits.webframework
 
-trait WebSession[T >: Null]{
+trait WebSession[T <: AnyRef]{
   self:WebResponse=>
   
   val sessionProvider:WebSessionProvider[T]

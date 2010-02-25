@@ -73,7 +73,9 @@ trait WebPage extends TextResponse{
   
   def body:Elements
   
-  def output[T >: AnyRef](content:Option[T]):T = content getOrElse null
+  def output[T <: AnyRef](content:Option[T]):T = content getOrElse null.asInstanceOf[T]
+  
+  def outputIf[T <: AnyRef](clause:Boolean)(content: =>T):T = if(clause) content else null.asInstanceOf[T]
   
 }
 
