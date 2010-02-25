@@ -11,17 +11,10 @@ trait MongoSessionProvider extends CustomSessionProvider[JsDocument]{
   
   object IsValidSession extends JsBooleanProperty("IsValidSession")
   object OriginalDocumentId extends JsStringProperty("OriginalDocumentId")
-  
-  def createUnusedSessionId():String = {
-    for(i <- 1 to 10;id = generateSessionId)
-      if(sessionCollection.findOne(JsDocument.Id == id).isEmpty)
-        return id
-      
-    error("unable to create a session id")
-  }
 
   protected def createSessionForValue(value:JsDocument):String = {
-    val id = createUnusedSessionId()
+    //use mongo generated id to prevent collisions, and use generatedSessionId to help with security
+    val id = (JsTools.generateId + generateSessionId).toLowerCase
     //swap our original id out for the session id and mark our session as valid, then store the session
     value(OriginalDocumentId <~ value.id and IsValidSession <~ true and JsDocument.Id <~ id) |> sessionCollection.save
     id
