@@ -43,6 +43,7 @@ object Sequences{
 object Dates{
   implicit def stringDateParsingExtensions(value:String) = new StringDateParsingExtensions(value)
   
+  import java.util.Date
   import java.text.SimpleDateFormat
   import scala.collection.mutable._
   
@@ -54,6 +55,12 @@ object Dates{
 
     parsers(format)  
   }
+  
+  def format(format:String)(value:Date):String = 
+    parser(format).format(value)
+  
+  def parse(format:String)(value:String):Option[Date] = 
+    attempt{parser(format).parse(value)}
 }
 
 object Files{
