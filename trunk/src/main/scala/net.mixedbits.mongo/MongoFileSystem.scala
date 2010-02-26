@@ -32,6 +32,10 @@ trait MongoFileProperties{
   object Extension extends JsStringProperty(Metadata,"extension")
 }
 
+object MongoFileChunk{
+  object FileId extends JsAnyProperty("files_id")
+}
+
 class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends MongoBaseCollection[MongoFile]{
   def this(database: => MongoDatabase) = this({database}, null)
   
@@ -52,7 +56,7 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   def store(source:java.io.InputStream, path:String, updates:JsUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
   def store(source:java.io.InputStream, path:String) = storeFile(rawFileSystem.createFile(source),path,None)
   
-  private def storeFile(inputFile:gridfs.GridFSInputFile, path:String, updates:Option[JsUpdate]){
+  private def storeFile(inputFile:gridfs.GridFSInputFile, path:String, updates:Option[JsUpdate]) = {
     //remove any existing files with this path...
     removeFile(path)
     
@@ -76,6 +80,8 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
       fileData(update)
 
     inputFile.save
+
+    new MongoFileCreateResult(inputFile.get("_id").toString,path,this)
   }
   
   def count() = metadata.count
@@ -122,7 +128,8 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   def removeFile(path:String) = 
     rawFileSystem.remove(path)
   
-
+  def updateChunksByFileId(id:String)(updates:JsUpdate) = 
+    chunks.find(MongoFileChunk.FileId == JsTools.marshalId(id)).update(updates)
 
   object Metadata extends JsObjectProperty("metadata")
   
@@ -209,6 +216,10 @@ class MongoFileSystemResultSet(filesystem:MongoFileSystem,constraint:Option[JsCo
   
   def remove() = 
     filesystem.rawFileSystem.remove(constraintToDBObject)
+}
+
+class MongoFileCreateResult(val id:String,val filename:String,fileSystem:MongoFileSystem){
+  lazy val file = fileSystem.getFile(filename)
 }
 
 class MongoFile(baseObject:GridFSDBFile,val database:MongoDatabase) extends JsDocument(baseObject){
