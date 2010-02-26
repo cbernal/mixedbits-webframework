@@ -35,6 +35,12 @@ trait XmlResponse extends TextResponse{
   def post = get 
 }
 
+trait JsonResponse extends TextResponse{
+  def content:net.mixedbits.json.JsObject
+  def get = ("application/json; charset=UTF-8", content.toJson)
+  def post = get 
+}
+
 trait CssResponse extends TextResponse{
   def content:String
   def get = "text/css; charset=UTF-8" -> content.toString
