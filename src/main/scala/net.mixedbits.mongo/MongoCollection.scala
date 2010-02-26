@@ -170,4 +170,19 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     MongoTools.checkBatchDetails(db) > 0
     }
   
+  def update(doc:JsDocument)(updates:JsUpdate):Boolean =
+    update(doc.id)(updates)
+  
+  def update(id:String)(updates:JsUpdate):Boolean = 
+    usingWriteConnection{
+    (db,rawCollection) =>
+    rawCollection.update(
+      new JsDocument(id).obj,
+      updates.buildUpdateObject,
+      false,//upsert
+      false//multi
+      )
+      
+    MongoTools.checkBatchDetails(db) > 0
+    }
 }
