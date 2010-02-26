@@ -8,7 +8,11 @@ object JsTools{
   def generateId():String =
     new com.mongodb.ObjectId().toString()
   
-  def marshalId(value:String):AnyRef = {
+  def marshalId(value:String):AnyRef = { 
+    if(value == null || value.length != 24)
+      return value
+    
+    //this method will convert strings that are longer than an object id if the first 12 hex encoded bytes are valid
     val objectId = ObjectId.massageToObjectId(value)
     if(objectId!=null)
       objectId
