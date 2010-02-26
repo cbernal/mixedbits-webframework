@@ -20,31 +20,36 @@ abstract class JsUpdate{
 }
 
 class JsUpdateGroup extends JsUpdate{
+  def this(updates:Seq[JsUpdate]) = {
+    this()
+    _updates ++= updates
+  }
+  
   def this(a:JsUpdate) = {
     this()
-    updates += a
+    _updates += a
   }
   def this(a:JsUpdate,b:JsUpdate) = {
     this()
-    updates += a
-    updates += b
+    _updates += a
+    _updates += b
   }
   
-  protected val updates = new ListBuffer[JsUpdate]
+  protected val _updates = new ListBuffer[JsUpdate]
   
   override def and(update:JsUpdate):JsUpdateGroup = {
-    updates += update
+    _updates += update
     this
   }
   
   def applyToObject(obj:JsObject) = {
-    for(update <- updates)
+    for(update <- _updates)
       update.applyToObject(obj)
     obj
   }
   
   def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
-    for(update <- updates)
+    for(update <- _updates)
       update.applyToUpdateObject(obj)
     obj
   }
