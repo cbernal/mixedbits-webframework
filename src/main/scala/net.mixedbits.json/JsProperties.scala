@@ -207,6 +207,13 @@ class JsLongProperty extends JsNumberProperty[Long]{
     new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
   override def fromString(value:String):Option[Long] = value.parseLong
+
+  override def readValue(start:DBObject):Option[Long] = 
+    readUncheckedValue[Any](start) match {
+      case Some(value:Int) => Some(value.toLong)
+      case Some(value:Long) => Some(value)
+      case _ => None
+    }
 }
 
 class JsDoubleProperty extends JsNumberProperty[Double]{
