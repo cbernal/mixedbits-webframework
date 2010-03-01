@@ -121,7 +121,7 @@ trait MongoWebQuery{
   }
   
   def searchParam(criteriaParam:Option[String],param:String):Option[String] = {
-    for(criteria <- criteriaParam)
+    (for(criteria <- criteriaParam)
       yield {
         val result = for(
                   entry <- criteria split ';';
@@ -134,7 +134,7 @@ trait MongoWebQuery{
           result.first
         else
           ""
-      }
+      }).filter(_!="")
   }
   
   
