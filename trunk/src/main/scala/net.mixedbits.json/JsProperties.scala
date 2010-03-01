@@ -113,7 +113,7 @@ class JsObjectProperty extends JsProperty[JsObject]{
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   
-  override def fromString(value:String) = attempt{JsObject.parse(value)}
+  override def fromString(value:String):Option[JsObject] = attempt{JsObject.parse(value)}
 }
 
 class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
@@ -160,7 +160,7 @@ class JsStringProperty extends JsProperty[String]{
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   
-  override def fromString(value:String) = Some(value)
+  override def fromString(value:String):Option[String] = Some(value)
 }
 
 class JsBooleanProperty extends JsProperty[Boolean]{
@@ -168,7 +168,7 @@ class JsBooleanProperty extends JsProperty[Boolean]{
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   
-  override def fromString(value:String) = value.parseBoolean
+  override def fromString(value:String):Option[Boolean] = value.parseBoolean
 }
 
 abstract class JsOrderedProperty[T] extends JsProperty[T]{
@@ -194,7 +194,7 @@ class JsIntProperty extends JsNumberProperty[Int]{
   def -=(value:Int):JsUpdate = 
     new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
-  override def fromString(value:String) = value.parseInt
+  override def fromString(value:String):Option[Int] = value.parseInt
 }
 
 class JsLongProperty extends JsNumberProperty[Long]{
@@ -206,7 +206,7 @@ class JsLongProperty extends JsNumberProperty[Long]{
   def -=(value:Long):JsUpdate = 
     new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
-  override def fromString(value:String) = value.parseLong
+  override def fromString(value:String):Option[Long] = value.parseLong
 }
 
 class JsDoubleProperty extends JsNumberProperty[Double]{
@@ -216,7 +216,7 @@ class JsDoubleProperty extends JsNumberProperty[Double]{
   def -=(value:Double):JsUpdate = 
     new JsPropertyUpdate(propertyName,"$inc",-value,(obj => for(orig <- obj(this)) obj(this) = orig-value))
     
-  override def fromString(value:String) = value.parseDouble
+  override def fromString(value:String):Option[Double] = value.parseDouble
 }
 
 class JsDateProperty extends JsOrderedProperty[Date]{
@@ -234,3 +234,27 @@ object JsIntProperty{ def apply(name:String) = new JsIntProperty(name) }
 object JsLongProperty{ def apply(name:String) = new JsLongProperty(name) }
 object JsDoubleProperty{ def apply(name:String) = new JsDoubleProperty(name) }
 object JsDateProperty{ def apply(name:String) = new JsDateProperty(name) }
+
+
+class JsUrlProperty extends JsStringProperty{
+  
+  override def fromString(value:String):Option[String] =
+    if(value startsWith "http://")
+      Some(value)
+    else if(value startsWith "https://")
+      Some(value)
+    else
+      None
+
+}
+
+
+class JsEmailProperty extends JsStringProperty{
+
+  override def fromString(value:String):Option[String] = 
+    if(value.contains("@") && value.lastIndexOf(".") > value.lastIndexOf("@"))
+      Some(value)
+    else
+      None
+
+}
