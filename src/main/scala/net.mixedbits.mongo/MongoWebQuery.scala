@@ -77,6 +77,9 @@ trait MongoWebQuery{
   def param(property:JsIntProperty) = intParam(property) _
   def param(property:JsDoubleProperty) = doubleParam(property) _
   def param(property:JsStringProperty) = stringParam(property) _
+  
+  def lowerCaseParam(property:JsStringProperty) = 
+    (op:String,value:String)=>stringParam(property)(op, value.toLowerCase)
 
   def intParam(property:JsNumberProperty[Int])(operation:String,value:String):JsConstraint = 
     numberParam(property,operation,value.toInt)
