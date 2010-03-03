@@ -254,6 +254,21 @@ object BlockStatements{
   /* caching */
   def cacheFor[T](duration:Duration)(generator: =>T) = new Cache(duration,{generator})
   def cacheMulti[K,V](duration:Duration)(generator: K=>V) = new CacheMulti(duration,generator)
+  def cacheMap[K,V](generator: K=>V) = new CacheMap(generator)
+}
+
+class CacheMap[K,V](generator: K=>V) extends Function1[K,V]{
+  import scala.collection.mutable._
+  private val map = Map[K,V]()
+  
+  def cacheValues = map.toArray
+  
+  def apply(key:K):V = {
+    if(!map.contains(key))
+      map(key) = generator(key)
+    
+    map(key)
+  }
 }
 
 class CacheMulti[K,V](duration:Duration,generator: K=>V){
@@ -314,6 +329,22 @@ class StringNumberParsingExtensions(val value:String){
 //object Short{def unapply(value:String) = value.parseShort}
 
 class StringExtensions(value:String){
+
+  def correlateCharacters(other:String):Int = {
+    if(value == other)
+      return value.length * 10
+    
+    var score = 0
+    
+    for(c <- value)
+      if(other contains c)
+        score += 1
+      
+    if(value.contains(other) || other.contains(value))
+      score * 2
+    else
+      score
+  }
   
   def autoElipsis(limit:Int) =
     if(value.length > limit)
@@ -331,7 +362,7 @@ class StringExtensions(value:String){
     for(i <- 0 until charArray.length){
       var temp = charArray(i)
       if( i==0 || lastCharWasWhitespaceOrPunct )
-      temp = Character.toUpperCase(temp)
+        temp = Character.toUpperCase(temp)
       
       lastCharWasWhitespaceOrPunct = punctSpacePattern.matcher(temp.toString).matches()
       outCharArray(i) = temp
@@ -363,6 +394,8 @@ class StringExtensions(value:String){
 
 class SequenceExtensions[T](items:Seq[T]){
   import scala.util.Sorting
+  def sort(compareFunction:(T,T) => Boolean):Seq[T] = Sorting.stableSort(items,compareFunction)
+  def sortOn[C <% Ordered[C]](compareField: T=>C) = Sorting.stableSort(items,(a:T,b:T) => compareField(a) < compareField(b))
   def selectRandom(desiredQuantity:Int):Array[T] = desiredQuantity match {
     case _ if desiredQuantity < 0 => items.toArray
     case _ => Sorting.stableSort(items,(a:T,b:T)=>MiscTools.random.nextBoolean).take(desiredQuantity)
