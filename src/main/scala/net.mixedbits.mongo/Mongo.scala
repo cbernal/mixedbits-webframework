@@ -25,9 +25,9 @@ abstract class MongoDatabase(name:String){
   
   protected def options = {
     val mongoOptions = new MongoOptions
-    mongoOptions.connectTimeout = 5000 // 5 seconds
-    mongoOptions.socketTimeout = 5000
-    mongoOptions.autoConnectRetry = true
+  //  mongoOptions.connectTimeout = 5000 // 5 seconds
+  //  mongoOptions.socketTimeout = 5000
+  //  mongoOptions.autoConnectRetry = true
     mongoOptions
   }
   
