@@ -7,7 +7,8 @@ object Tools{
   implicit def elemToNodeBuffer(element:Elem) = 
     new NodeBuffer() &+ element
   
-  def Elements(elements:Elements):Elements = elements
-  
-  def Elements():Elements = new Elements
+  object Elements{
+    def apply(elements:Elements):Elements = elements
+    def apply():Elements = new Elements
+  }
 }
