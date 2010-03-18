@@ -235,6 +235,9 @@ class MongoFile(baseObject:GridFSDBFile,val database:MongoDatabase) extends JsDo
   def bufferedStream() = new BufferedInputStream(inputStream)
   def readAllText() = IO.readAllText(inputStream)
   def readAllText(encoding:String) = IO.readAllText(inputStream,encoding)
+  
+  def contentType():String = 
+    this(MongoFile.ContentType) getOrElse MimeTypes.getContentTypeForName(name)
 }
 
 object MongoFile extends MongoFileProperties
