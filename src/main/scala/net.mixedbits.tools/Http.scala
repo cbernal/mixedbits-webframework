@@ -124,7 +124,7 @@ class HttpRequest private[tools](requestMethod:String,url:String){
         def getName:String = requestMethod
         setRequestEntity(
           requestBody match {
-            case FileRequestBody(file) => new FileRequestEntity(file,Http.getContentTypeForName(file.getName))
+            case FileRequestBody(file) => new FileRequestEntity(file,MimeTypes.getContentTypeForName(file.getName))
             case InputStreamRequestBody(inputStream,contentLength) => new InputStreamRequestEntity(inputStream,contentLength)
             case StringRequestBody(value,charset) => new StringRequestEntity(value, "application/x-www-form-urlencoded", charset)
             case FormValueRequestBody(formValues) => new StringRequestEntity(urlEncode(formValues:_*), "application/x-www-form-urlencoded", "UTF-8")
@@ -325,25 +325,6 @@ object Http{
   val ContentType = "Content-Type"
   val LastModified = "Last-Modified"
   val Host = "Host"
-  
-  //mime
-  def getContentTypeForName(name:String):String = getContentTypeForName(name,true)
-  def getContentTypeForName(name:String,allowExecutableTypes:Boolean) = name.substring(name.lastIndexOf(".")).toLowerCase match{
-		case ".html" => "text/html"
-		case ".htm" => "text/html"
-		case ".txt" => "text/plain"
-		case ".css" => "text/css"
-		case ".js" if(allowExecutableTypes) => "application/x-javascript"
-		case ".jpg" => "image/jpeg"
-		case ".jpe" => "image/jpeg"
-		case ".jpeg" => "image/jpeg"
-		case ".png" => "image/png"
-		case ".gif" => "image/gif"
-		case ".mp3" => "audio/mpeg"
-		case ".swf" if(allowExecutableTypes) => "application/x-shockwave-flash"
-		case ".wav" => "audio/x-wav"
-		case _ => "application/octet-stream"
-  }
   
   //context
   def context = new HttpContext
