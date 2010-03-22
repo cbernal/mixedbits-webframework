@@ -6,6 +6,15 @@ import scala.collection.mutable._
 
 trait WebApplication extends Filter{
   
+  val notFoundPage:WebResponse
+  //def paths:PartialFunction[String,WebResponse]
+  
+  type PathMatcher = PartialFunction[String,WebResponse]
+  
+  private var pathsList:List[PathMatcher] = Nil
+  
+  def paths(matcher:PathMatcher) = pathsList ::= matcher
+  
   private var context:ServletContext = null
   def init(config:FilterConfig){
     context = config.getServletContext
@@ -22,15 +31,14 @@ trait WebApplication extends Filter{
     
     WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
       findPage(path) match {
-        case Some( (webPage,webPathMatch) ) => return showPage(webPage,webPathMatch)
+        case Some(webPage) => return showPage(webPage,path)
         case None => ()
       }      
       
       //detect lack of file and show custom not found page
       if(!new java.io.File(httpRequest.getRealPath(path)).exists){
         
-        //we aren't in the context of a valid path match anymore, just give it a fake one
-        return showPage(notFoundPage,WebPathMatch(path,path))
+        return showPage(notFoundPage,path)
         
       }
 
@@ -39,20 +47,20 @@ trait WebApplication extends Filter{
     chain.doFilter(request, response)
   }
   
-  def findPage(path:String):Option[(WebResponse,WebPathMatch)] = {
-    for( (webPath,webPage) <- registeredPages ){
-      val result = webPath testPath path
-      result match{
-        case Some(webPathMatch) =>
-          return Some( (webPage,webPathMatch) )
-        case _ => ()
-      }
-    }
-    return None
+  object Path{
+    def unapplySeq(path:String):Option[Seq[String]] = 
+      Some(path split '/' drop 1)
   }
   
-  private def showPage(page:WebResponse,webPath:WebPathMatch){
-    WebRequest.webPath.withValue(webPath) {
+  def findPage(path:String):Option[WebResponse] = {
+    var result:Option[PathMatcher] = None
+    for(matcher <- pathsList; if matcher isDefinedAt path)
+      result = Some(matcher)
+    result map { _(path) }
+  }
+  
+  private def showPage(page:WebResponse,path:String){
+    WebRequest.webPath.withValue(WebPathMatch(path)) {
       try{
         page.runBeforeActions()
         page.processRequest()
@@ -69,8 +77,8 @@ trait WebApplication extends Filter{
           findPage(newPath) match {
             
             //handle it internally
-            case Some( (webPage,webPathMatch) ) =>
-              return showPage(webPage,webPathMatch)
+            case Some(webPage) =>
+              return showPage(webPage,newPath)
             
             //let the container handle it...
             case None =>
@@ -81,7 +89,7 @@ trait WebApplication extends Filter{
           
         case e if e == WebResponseNotFoundException => 
           //detect explicit request for not found page
-          showPage(notFoundPage,webPath)
+          showPage(notFoundPage,path)
 
       }
       finally{
@@ -89,15 +97,6 @@ trait WebApplication extends Filter{
       }
     }
   }
-  
-  lazy val registeredPages = Map(
-                                (pages ++ pages.flatMap{ case(_,page) => page.registeredPages }):_*
-                                ).map{ case(path,page) => WebPath(path) -> page }.toList
-
-  //tuple of path,page
-  val pages:Seq[(String,WebResponse)]  
-  val notFoundPage:WebResponse
-
 }
 
 
