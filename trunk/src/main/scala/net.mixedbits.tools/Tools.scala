@@ -8,24 +8,39 @@ import BlockStatements._
 
 import org.scala_tools.time.Imports._
 
-object Numbers{
-  implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)
+object Imports
+  extends NumbersImports
+  with StringsImports
+  with SequencesImports
+  with DatesImports
+  //with FilesImports
+  //with NetworkImports
+  //with ExceptionsImports
+  with ObjectsImports
+  with BlockStatementsImports
+  //with IOImports
+  //with HashImports
+  //with PasswordsImports
+  with CloseableResourceImports
+  
+
+object Numbers extends NumbersImports{
   def randomInt(minValue:Int,maxValue:Int):Int = 
     MiscTools.randomInt(minValue,maxValue)
 }
-
-object Strings{
-  implicit def stringExtensions(value:String) = new StringExtensions(value)
-  
-  def generateGuid() = java.util.UUID.randomUUID.toString 
+trait NumbersImports{
+  implicit def stringNumberParsingExtensions(value:String) = new StringNumberParsingExtensions(value)
 }
 
-object Sequences{
-  
-  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) = new scala.collection.jcl.MutableIterator.Wrapper(it)
 
-  implicit def sequenceExtensions[T](value:Seq[T]) = new SequenceExtensions(value)
-  
+object Strings extends StringsImports{
+  def generateGuid() = java.util.UUID.randomUUID.toString
+}
+trait StringsImports{
+  implicit def stringExtensions(value:String) = new StringExtensions(value)
+}
+
+object Sequences extends SequencesImports{
   def sort[T](list:Array[T])(compareFunction:(T,T) => Boolean):Array[T] = scala.util.Sorting.stableSort(list,compareFunction)
   
   def randomSet(count:Int,min:Int,max:Int):List[Int] = {
@@ -39,10 +54,23 @@ object Sequences{
     results.toList
   }
 }
-
-object Dates{
-  implicit def stringDateParsingExtensions(value:String) = new StringDateParsingExtensions(value)
+trait SequencesImports{
   
+  implicit def javaEnumerationToScalaIterator[A](it : java.util.Enumeration[A]) =
+    new scala.collection.jcl.MutableIterator.Wrapper(
+      new java.util.Iterator[A]{
+        def hasNext = it.hasMoreElements
+        def next = it.nextElement
+        def remove(){throw new UnsupportedOperationException()}
+      }
+    )
+
+  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) = new scala.collection.jcl.MutableIterator.Wrapper(it)
+
+  implicit def sequenceExtensions[T](value:Seq[T]) = new SequenceExtensions(value)
+}
+
+object Dates extends DatesImports{
   import java.util.Date
   import java.text.SimpleDateFormat
   import scala.collection.mutable._
@@ -60,10 +88,14 @@ object Dates{
     parser(format).format(value)
   
   def parse(format:String)(value:String):Option[Date] = 
-    attempt{parser(format).parse(value)}
+    attempt{parser(format).parse(value)} 
+}
+trait DatesImports{
+  implicit def stringDateParsingExtensions(value:String) = new StringDateParsingExtensions(value)
 }
 
-object Files{
+object Files extends FilesImports
+trait FilesImports{
   import java.io._
   def write(file:File) = new{
     def using[T](f: Writer=>T):T = {
@@ -138,13 +170,15 @@ object Files{
   
 }
 
-object Network{
+object Network extends NetworkImports
+trait NetworkImports{
 	def hostname() = 
     try{ java.net.InetAddress.getLocalHost.getHostName }
     catch{ case _ => "Unknown" }
 }
 
-object Exceptions{
+object Exceptions extends ExceptionsImports
+trait ExceptionsImports{
   def stackTrace(t:Throwable):String = {
     val buffer = new java.io.ByteArrayOutputStream
     val writer = new java.io.PrintWriter(buffer,true)
@@ -158,8 +192,15 @@ object Exceptions{
   }
 }
 
-object Objects{
-
+object Objects extends ObjectsImports{
+  private def classNameParts(name:String) = name.split('$') filter{_!=""}
+  
+  def objectPath(o:AnyRef) = classNameParts(o.getClass.getSimpleName)
+  def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
+  
+  def className(o:AnyRef) = classNameParts(o.getClass.getName) mkString "."
+}
+trait ObjectsImports{
   type |[A,B] = Either[A,B]
   implicit def toLeft[A,B](a:A):Either[A,B] = Left(a)
   implicit def toRight[A,B](b:B):Either[A,B] = Right(b)
@@ -169,26 +210,18 @@ object Objects{
       None                            
     else
       Some(value)
-
-    
-  private def classNameParts(name:String) = name.split('$') filter{_!=""}
   
-  def objectPath(o:AnyRef) = classNameParts(o.getClass.getSimpleName)
-  def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
-  
-  def className(o:AnyRef) = classNameParts(o.getClass.getName) mkString "."
-  
-  
-  class ForwardPipe[T] private[Objects](value:T){
-    def |>[R] (f: T => R):R = f(value)
-    def |>> (f: T => Any):T = {f(value);value}
-  }
   implicit def toForwardPipe[T](value:T) = new ForwardPipe[T](value)
+}
 
+class ForwardPipe[T](value:T){
+  def |>[R] (f: T => R):R = f(value)
+  def |>> (f: T => Any):T = {f(value);value}
 }
 
 
-object BlockStatements{
+object BlockStatements extends BlockStatementsImports
+trait BlockStatementsImports{
   /* exceptions */
 	def attempt[T](f: =>T):Option[T] = 
 	  try{ Objects.toOption(f) }
@@ -345,7 +378,7 @@ class StringExtensions(value:String){
     else
       score
   }
-  
+
   def autoElipsis(limit:Int) =
     if(value.length > limit)
       value.substring(0,limit - 3)+"..."
@@ -408,7 +441,8 @@ private object MiscTools{
   def randomInt(minValue:Int,maxValue:Int):Int = random.nextInt(maxValue - minValue + 1)+minValue
 }
 
-object IO{
+object IO extends IOImports
+trait IOImports{
   
   import java.io._
   
@@ -461,7 +495,8 @@ object IO{
   }
 }
 
-object Hash{
+object Hash extends HashImports
+trait HashImports{
   import java.io._
   
   def md5(string:String):String = 
@@ -496,7 +531,8 @@ object Hash{
   }
 }
 
-object Passwords{
+object Passwords extends PasswordsImports
+trait PasswordsImports{
   import org.mindrot.bcrypt.BCrypt
   def hash(password:String):String = BCrypt.hashpw(password,BCrypt.gensalt)
   //strength is valid from 4 to 31, 31 is strongest, each increment is twice as much work, 10 is the default value
