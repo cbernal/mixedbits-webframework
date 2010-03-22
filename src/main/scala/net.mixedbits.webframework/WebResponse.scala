@@ -20,6 +20,8 @@ object WebResponse{
 
 trait WebResponse{
   
+  def processRequest():Unit
+  
   def notFound[T]():T = WebResponse.notFound[T]
   def forward[T](path:String):T = WebResponse.forward[T](path)
   def redirect[T](redirectType:HttpRedirect,location:String):T = WebResponse.redirect[T](redirectType,location)
@@ -33,23 +35,9 @@ trait WebResponse{
   def responseHeader(name:String,value:String) = WebResponse.responseHeader(name,value)
   
   
-  
-  lazy val registeredPages:List[(String,WebResponse)] = registeredPages(new ListBuffer[(String,WebResponse)],_registeredPages.toList).toList
-  
-  private def registeredPages(results:ListBuffer[(String,WebResponse)],pagesToAdd:List[(String,WebResponse)]):ListBuffer[(String,WebResponse)] = {
-    results ++= pagesToAdd
-    for( (_,page) <- pagesToAdd)
-      registeredPages(results,page.registeredPages)
-    results
-  }
-  private val _registeredPages = new ListBuffer[(String,WebResponse)]()
-  
-  protected def registerPages( pages:(String,WebResponse)* ){
-    _registeredPages ++= pages
-  }
-  
-  def processRequest():Unit
-  
+  /***********************
+  | before/after actions |
+  ***********************/
   private val _beforeActions = new ListBuffer[()=>Any]()
   protected def run[T](action: =>T){ _beforeActions += action _ }
   protected def onBefore[T](action: =>T){ _beforeActions += action _ }

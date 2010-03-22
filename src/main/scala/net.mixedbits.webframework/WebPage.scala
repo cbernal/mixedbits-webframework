@@ -18,6 +18,11 @@ case class script(filename:String) extends IncludeFile{
     <script type="text/javascript" src={filename}></script>
 }
 
+case class scriptBody(body:String) extends IncludeFile{
+  def elements = 
+    <script type="text/javascript">{Unparsed(body)}</script>
+}
+
 case class rss(filename:String) extends IncludeFile{
   def elements = 
     <link rel="alternate" type="application/rss+xml" title="RSS" href={filename} />
@@ -55,10 +60,19 @@ trait WebPage extends TextResponse{
   
   def contentType = "text/html; charset="+charset
   
+  def useStrictDocType = false
+  
+  def docType = 
+    if(useStrictDocType)
+      """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">"""
+    else
+      """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""
+    
+  def xmlns = "http://www.w3.org/1999/xhtml"
+  
   def html = 
-    """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">"""+
-    Xhtml.toXhtml(
-      <html xmlns="http://www.w3.org/1999/xhtml" lang={lang} xml:lang={lang}>
+    docType+"\n"+Xhtml.toXhtml(
+      <html xmlns={xmlns} lang={lang} xml:lang={lang}>
         <head>
           <title>{title}</title>
           <meta http-equiv="Content-Type" content={contentType} />
@@ -82,13 +96,12 @@ trait WebPage extends TextResponse{
 
 abstract class SimpleRedirect(redirectType: => HttpRedirect,location: => String) extends WebPage{
   run{
-    val HttpRedirect(code) = redirectType
-    responseCode(code)
+    responseCode(redirectType.code)
     responseHeader("Location",location)
   }
   def title = "Redirecting to "+location+"..."
   
   def body = 
     <h1>{title}</h1>
-  //  <a href={location}>{location}</a>
+    <a href={location}>{location}</a>
 }

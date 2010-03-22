@@ -7,16 +7,15 @@ import net.mixedbits.webframework.Tools._
 
 object SampleApplication extends WebApplication{
   
-  val pages = List(
-    ""->HomePage,
-    "/products"->ProductPage,
-    "/products/*"->ProductEntryPage,
-    "/blog"->BlogPage,
-    "/blog/*"->BlogEntryPage
-  )
-  
-  val notFoundPage = NotFoundPage
-  
+  paths{
+    case Path() => HomePage 
+    case Path("products") => ProductPage 
+    case Path("products",id) => ProductEntryPage(id) 
+    case Path("blog") => BlogPage 
+    case Path("blog",id) => BlogEntryPage(id) 
+  }
+
+  val notFoundPage = NotFoundPage  
 }
 
 trait DefaultTemplate extends WebPage with WebRequest{
@@ -68,7 +67,6 @@ object HomePage extends DefaultTemplate{
     <p>
       Welcome to some random website, please search for products!
       { for(name <- people) yield <h3>{name}!!!</h3> }
-      { WebRequest.webApplication.registeredPages.map{case(path,_)=>{<p>WebPath({path})</p>}} }
     </p>
 }
 
@@ -151,10 +149,10 @@ object ProductPage extends DefaultTemplate{
 
 }
 
-object ProductEntryPage extends DefaultTemplate{
+case class ProductEntryPage(productId:String) extends DefaultTemplate{
   def content = 
     <div>
-    { Products.productTemplate(Products.productById(webpath.wildcards.first)) }
+    { Products.productTemplate(Products.productById(productId)) }
     </div>
 }
 
@@ -214,9 +212,9 @@ object BlogPage extends DefaultTemplate{
     </div>
 }
 
-object BlogEntryPage extends DefaultTemplate{
+case class BlogEntryPage(entryId:String) extends DefaultTemplate{
   override def title = super.title + " :: Blog :: "+currentBlogEntry.map(_.title).getOrElse(Blog.noEntryFound)
-  def currentBlogEntry = Blog.entryById(webpath.wildcards.first) 
+  def currentBlogEntry = Blog.entryById(entryId) 
   def content = 
     <div>
     { Blog.entryTemplate(currentBlogEntry) }
