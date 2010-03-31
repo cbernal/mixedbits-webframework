@@ -16,5 +16,15 @@ object Tools{
     }
     def apply(elements:Elements):Elements = elements
     def apply():Elements = new Elements
+    
+    def toXhtml(elem:Elem) = Xhtml.toXhtml(elem,false,false)
+    def toXhtml(elements:Elements) = {
+      val buffer = new StringBuffer
+      
+      for(elem <- elements)
+        buffer.append(Xhtml.toXhtml(elem,false,false))
+      
+      buffer.toString
+    }
   }
 }
