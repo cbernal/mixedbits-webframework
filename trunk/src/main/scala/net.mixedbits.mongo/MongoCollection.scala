@@ -79,16 +79,16 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     }
   }
   
-  protected def indexId():Unit = usingWriteConnection{_.ensureIDIndex()}
+  def indexId():Unit = usingWriteConnection{_.ensureIDIndex()}
   
   
-  protected def indexProperties(indicies:IndexLeft*) =
+  def indexProperties(indicies:IndexLeft*) =
     index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
   
-  protected def indexGroups(indicies:IndexRight*) =
+  def indexGroups(indicies:IndexRight*) =
     index(indicies.map(toRight[IndexLeft,IndexRight](_)):_*)
     
-  protected def index(indicies:IndexParam*){
+  def index(indicies:IndexParam*){
     usingWriteConnection{
       connection=>
       
