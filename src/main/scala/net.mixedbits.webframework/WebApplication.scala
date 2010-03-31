@@ -23,28 +23,62 @@ trait WebApplication extends Filter{
   def destroy{
   }
   
+  object DeadSession extends HttpSession{
+    def getAttribute(name:String):AnyRef = null
+    def getAttributeNames():java.util.Enumeration[_] = null
+    def getCreationTime():Long = System.currentTimeMillis
+    def getId():String = ""
+    def getLastAccessedTime():Long = System.currentTimeMillis
+    def getMaxInactiveInterval():Int = 0
+    def getServletContext():ServletContext = null
+    def getSessionContext():HttpSessionContext = null
+    def getValue(name:String):AnyRef = null
+    def getValueNames():Array[String] = Array[String]()
+    def invalidate(){}
+    def isNew():Boolean = true
+    def putValue(name:String, value:Any){}
+    def removeAttribute(name:String){}
+    def removeValue(name:String){}
+    def setAttribute(name:String, value:Any){}
+    def setMaxInactiveInterval(interval:Int){}
+  }
+  
+  def requestWrapper(request:HttpServletRequest):HttpServletRequest = request
+  //def requestWrapper(request:HttpServletRequest):HttpServletRequest = {
+  //  new HttpServletRequestWrapper(request){
+  //    override def getSession():HttpSession = DeadSession
+  //    override def getSession(create:Boolean):HttpSession = DeadSession
+  //  }
+  //}
+  
 	def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain){
-    val httpRequest = request.asInstanceOf[HttpServletRequest]
+    val httpRequest = requestWrapper(request.asInstanceOf[HttpServletRequest])
     val httpResponse = response.asInstanceOf[HttpServletResponse]
     
     val path = httpRequest.getRequestURI
     
     WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
-      findPage(path) match {
-        case Some(webPage) => return showPage(webPage,path)
-        case None => ()
-      }      
       
-      //detect lack of file and show custom not found page
-      if(!new java.io.File(httpRequest.getRealPath(path)).exists){
+      try{
         
-        return showPage(notFoundPage,path)
+        findPage(path) match {
+          case Some(webPage) => return showPage(webPage,path)
+          case None => ()
+        }      
         
+        //detect lack of file and show custom not found page
+        if(!new java.io.File(httpRequest.getRealPath(path)).exists)
+          return showPage(notFoundPage,path)
+        
+      }
+      catch{
+        //this stops our custom 404 from intercepting other servlets / filters, etc
+        case e if e == WebResponseContinueJ2EEProcessing => ()
       }
 
     }
     
-    chain.doFilter(request, response)
+    chain.doFilter(httpRequest, httpResponse)
   }
   
   object Path{
@@ -87,6 +121,9 @@ trait WebApplication extends Filter{
             
           }
           
+        case e if e == WebResponseContinueJ2EEProcessing =>
+          throw WebResponseContinueJ2EEProcessing
+        
         case e if e == WebResponseNotFoundException => 
           //detect explicit request for not found page
           showPage(notFoundPage,path)

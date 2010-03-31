@@ -2,11 +2,13 @@ package net.mixedbits.webframework
 
 import scala.collection.mutable._
 
+object WebResponseContinueJ2EEProcessing extends Exception
 object WebResponseNotFoundException extends Exception
 case class WebResponseForwardPage(path:String) extends Exception
 case class WebResponseRedirect(redirectType:HttpRedirect,location:String) extends Exception
 
 object WebResponse{
+  def continueJ2EEProcessing[T]():T = {throw WebResponseContinueJ2EEProcessing}
   def notFound[T]():T = {throw WebResponseNotFoundException}
   def forward[T](path:String):T = {throw WebResponseForwardPage(path)}
   def redirect[T](redirectType:HttpRedirect,location:String):T = {throw WebResponseRedirect(redirectType,location)}
@@ -22,6 +24,7 @@ trait WebResponse{
   
   def processRequest():Unit
   
+  def continueJ2EEProcessing[T]():T = WebResponse.continueJ2EEProcessing[T]
   def notFound[T]():T = WebResponse.notFound[T]
   def forward[T](path:String):T = WebResponse.forward[T](path)
   def redirect[T](redirectType:HttpRedirect,location:String):T = WebResponse.redirect[T](redirectType,location)
