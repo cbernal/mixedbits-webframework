@@ -23,32 +23,32 @@ trait WebApplication extends Filter{
   def destroy{
   }
   
-  object DeadSession extends HttpSession{
-    def getAttribute(name:String):AnyRef = null
-    def getAttributeNames():java.util.Enumeration[_] = null
-    def getCreationTime():Long = System.currentTimeMillis
-    def getId():String = ""
-    def getLastAccessedTime():Long = System.currentTimeMillis
-    def getMaxInactiveInterval():Int = 0
-    def getServletContext():ServletContext = null
-    def getSessionContext():HttpSessionContext = null
-    def getValue(name:String):AnyRef = null
-    def getValueNames():Array[String] = Array[String]()
-    def invalidate(){}
-    def isNew():Boolean = true
-    def putValue(name:String, value:Any){}
-    def removeAttribute(name:String){}
-    def removeValue(name:String){}
-    def setAttribute(name:String, value:Any){}
-    def setMaxInactiveInterval(interval:Int){}
-  }
-  
   def requestWrapper(request:HttpServletRequest):HttpServletRequest = request
   //def requestWrapper(request:HttpServletRequest):HttpServletRequest = {
   //  new HttpServletRequestWrapper(request){
   //    override def getSession():HttpSession = DeadSession
   //    override def getSession(create:Boolean):HttpSession = DeadSession
   //  }
+  //}
+  
+  //object DeadSession extends HttpSession{
+  //  def getAttribute(name:String):AnyRef = null
+  //  def getAttributeNames():java.util.Enumeration[_] = null
+  //  def getCreationTime():Long = System.currentTimeMillis
+  //  def getId():String = ""
+  //  def getLastAccessedTime():Long = System.currentTimeMillis
+  //  def getMaxInactiveInterval():Int = 0
+  //  def getServletContext():ServletContext = null
+  //  def getSessionContext():HttpSessionContext = null
+  //  def getValue(name:String):AnyRef = null
+  //  def getValueNames():Array[String] = Array[String]()
+  //  def invalidate(){}
+  //  def isNew():Boolean = true
+  //  def putValue(name:String, value:Any){}
+  //  def removeAttribute(name:String){}
+  //  def removeValue(name:String){}
+  //  def setAttribute(name:String, value:Any){}
+  //  def setMaxInactiveInterval(interval:Int){}
   //}
   
 	def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain){
