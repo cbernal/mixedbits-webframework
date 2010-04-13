@@ -80,7 +80,7 @@ trait BufferedMultipartRequest extends WebRequest{
   
   /******************
   | implementation  |
-  ******************/  
+  ******************/
   
   private val multipartParams = new DynamicVariable[(Map[String,String],Map[String,MultipartBufferedFile])](null)
   
@@ -118,10 +118,10 @@ trait BufferedMultipartRequest extends WebRequest{
   
   onAfter{
     //try to clean up after ourselves
-    val (_,formFiles) = multipartParams.value
-    for(value <- formFiles.values; if value.file.exists)
-      if(!value.file.delete())
-        value.file.deleteOnExit()
+    for( (_,formFiles) <- Objects.toOption(multipartParams.value))
+      for(value <- formFiles.values; if value.file.exists)
+        if(!value.file.delete())
+          value.file.deleteOnExit()
       
     multipartParams.value = null
   }
