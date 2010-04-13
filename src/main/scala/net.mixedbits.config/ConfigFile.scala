@@ -97,6 +97,14 @@ trait DefaultValueExtractorsTrait{
   implicit def stringToInt(value:String) = try{ Some(value.toInt) } catch{ case _ => None }
   implicit def stringToLong(value:String) = try{ Some(value.toLong) } catch{ case _ => None }
   implicit def stringToDouble(value:String) = try{ Some(value.toDouble) } catch{ case _ => None }
+  implicit def stringToFile(value:String) = {
+    val file = new File(value)
+    if(file.exists)
+      Some(file)
+    else
+      None
+  }
+
 }
 
 object DefaultValueExtractors extends DefaultValueExtractorsTrait
