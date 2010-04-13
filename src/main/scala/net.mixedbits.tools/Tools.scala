@@ -13,7 +13,7 @@ object Imports
   with StringsImports
   with SequencesImports
   with DatesImports
-  //with FilesImports
+  with FilesImports
   //with NetworkImports
   //with ExceptionsImports
   with ObjectsImports
@@ -94,8 +94,7 @@ trait DatesImports{
   implicit def stringDateParsingExtensions(value:String) = new StringDateParsingExtensions(value)
 }
 
-object Files extends FilesImports
-trait FilesImports{
+object Files extends FilesImports{
   import java.io._
   def write(file:File) = new{
     def using[T](f: Writer=>T):T = {
@@ -167,7 +166,29 @@ trait FilesImports{
 
   def findAll(dirs:Seq[File],extension:String):List[File] = 
     findAll(dirs,{f:File => f.getName endsWith extension})
+}
+trait FilesImports{
+  import java.io._
+  implicit def toExtendedFile(file:File) = new ExtendedFile(file)
+}
+
+class ExtendedFile(path:String) extends java.io.File(path){
+  def this(file:java.io.File) = this(file.getAbsolutePath)
+  def this(parent:java.io.File,child:String) = this(new java.io.File(parent,child))
+  def this(parent:String,child:String) = this(new java.io.File(parent,child))
+  def this(uri:java.net.URI) = this(new java.io.File(uri))
   
+  
+  def / (name:String) = new ExtendedFile(this,name)
+  def / (symbol:Symbol) = {
+    val Symbol(name) = symbol
+    new ExtendedFile(this,name)
+  }
+  
+  def parent = new ExtendedFile(getParentFile)
+  
+  def createParents() = {parent.mkdirs();this}
+  def createFolders() = {mkdirs();this}
 }
 
 object Network extends NetworkImports
@@ -216,7 +237,7 @@ trait ObjectsImports{
 
 class ForwardPipe[T](value:T){
   def |>[R] (f: T => R):R = f(value)
-  def |>> (f: T => Any):T = {f(value);value}
+  def |>>[R] (f: T => R):T = {f(value);value}
 }
 
 
