@@ -43,7 +43,7 @@ sealed trait JsProperty[T]{
     putUncheckedValue(start,value)
   
   def readValue(start:DBObject):Option[T] = 
-    readUncheckedValue(start)
+    readUncheckedValue[Any](start).map(value => JsTools.wrappedValue(value).asInstanceOf[T])
   
   //property name / parts
   protected var explicitPropertyName:String = null
@@ -102,7 +102,17 @@ class JsIdProperty extends JsProperty[String]{
   override def !=(value:String):JsConstraint = new JsPropertyConstraint(propertyName,"$ne",MongoTools.marshalId(value))
 }
 */
-class JsAnyProperty extends JsProperty[AnyRef]{
+
+
+abstract class JsOrderedProperty[T] extends JsProperty[T]{
+  def >(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$gt",value)
+  def >=(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$gte",value)
+  def <(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$lt",value)
+  def <=(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$lte",value)
+}
+
+
+class JsAnyProperty extends JsOrderedProperty[AnyRef]{
   def this(name:String) = {this();propertyName(name)}
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
@@ -155,7 +165,7 @@ class JsArrayProperty[T] extends JsProperty[JsArray[T]]{
       )
 }
 
-class JsStringProperty extends JsProperty[String]{
+class JsStringProperty extends JsOrderedProperty[String]{
   def this(name:String) = {this();propertyName(name)}
   def this(parent:JsProperty[_]) = {this();propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
@@ -169,13 +179,6 @@ class JsBooleanProperty extends JsProperty[Boolean]{
   def this(parent:JsProperty[_],name:String) = {this();propertyName(parent.propertyName+"."+name)}
   
   override def fromString(value:String):Option[Boolean] = value.parseBoolean
-}
-
-abstract class JsOrderedProperty[T] extends JsProperty[T]{
-  def >(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$gt",value)
-  def >=(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$gte",value)
-  def <(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$lt",value)
-  def <=(value:T):JsConstraint = new JsPropertyConstraint(propertyName,"$lte",value)
 }
 
 abstract class JsNumberProperty[T <: AnyVal] extends JsOrderedProperty[T]{
