@@ -48,5 +48,13 @@ object JsTools{
       value.asInstanceOf[JsArray[_]].list
     else
       value
+    
+  def wrappedValue(value:Any):Any = 
+    if(value.isInstanceOf[BasicDBList])
+      new JsArray(value.asInstanceOf[BasicDBList])
+    else if(value.isInstanceOf[DBObject])
+      new JsObject(value.asInstanceOf[DBObject])
+    else
+      value
   
 }
