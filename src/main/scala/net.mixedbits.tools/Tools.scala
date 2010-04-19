@@ -272,14 +272,19 @@ trait BlockStatementsImports{
     }
   }
   
-  def printDuration[T](f: =>T):T = {
+  def printDuration[T](f: =>T):T = printDuration(""){f}
+  def printDuration[T](description:String)(f: =>T):T = {
     val start = System.currentTimeMillis
     try{
       return f
     }
     finally{
       val duration = System.currentTimeMillis - start
-      println("Process took "+(duration/1000.0)+" seconds") 
+      val title = if(description == "")
+                    "Process"
+                  else
+                    "'"+description+"'"
+      println(title+" took "+(duration/1000.0)+" seconds") 
     }
   }
   
