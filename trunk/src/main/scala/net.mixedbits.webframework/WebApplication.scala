@@ -4,6 +4,8 @@ import javax.servlet._
 import javax.servlet.http._
 import scala.collection.mutable._
 
+import net.mixedbits.tools._
+
 trait WebApplication extends Filter{
   
   val notFoundPage:WebResponse
@@ -55,7 +57,7 @@ trait WebApplication extends Filter{
     val httpRequest = requestWrapper(request.asInstanceOf[HttpServletRequest])
     val httpResponse = response.asInstanceOf[HttpServletResponse]
     
-    val path = httpRequest.getRequestURI
+    val path = java.net.URLDecoder.decode(httpRequest.getRequestURI,Objects.toOption(httpRequest.getCharacterEncoding) getOrElse "UTF-8")
     
     WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
       
