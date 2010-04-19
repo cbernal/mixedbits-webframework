@@ -20,6 +20,9 @@ trait MongoBaseCollection[T <: JsDocument]{
 }
 
 class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:JsObject) extends MongoBaseCollection[JsDocument]{
+  val Ascending = SortDirection.Ascending
+  val Descending = SortDirection.Descending
+  
   type IndexLeft = JsProperty[_]
   type IndexRight = (String,List[JsProperty[_]])
   type IndexParam = IndexLeft|IndexRight
@@ -88,6 +91,19 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
   def indexGroups(indicies:IndexRight*) =
     index(indicies.map(toRight[IndexLeft,IndexRight](_)):_*)
     
+  
+  def index(indexName:String,properties:(JsProperty[_],SortDirection)*) = {
+    usingWriteConnection{
+      connection=>
+      val indexDescription = new BasicDBObject
+      for( (property,direction) <- properties)
+        indexDescription.put(property.propertyName,direction.value)
+      //println("Ensuring index("+indexName+"): "+indexDescription)
+      //printDuration{
+      connection.ensureIndex(indexDescription,indexName)
+    }
+  }
+  
   def index(indicies:IndexParam*){
     usingWriteConnection{
       connection=>
