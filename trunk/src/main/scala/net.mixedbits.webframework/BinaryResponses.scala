@@ -27,14 +27,30 @@ trait BinaryResponse extends WebResponse{
 trait SimpleBinaryResponse extends WebResponse{
   import java.io.InputStream
   
-  //tuple containing contentType and responseBody
-  def data:(String,InputStream)
+  case class BinaryResponse(contentType:Option[String],contentLength:Option[Int],stream:InputStream)
+  
+  implicit def tupleToBinaryResponseData(tuple:(String,InputStream)):BinaryResponse = tuple match {
+    case (contentType,stream) => BinaryResponse(Some(contentType),None,stream)
+  }
+  implicit def tupleToBinaryResponseData(tuple:(String,Int,InputStream)):BinaryResponse = tuple match {
+    case (contentType,contentLength,stream) => BinaryResponse(Some(contentType),Some(contentLength),stream)
+  }
+  implicit def toBinaryResponse(stream:InputStream):BinaryResponse =
+    BinaryResponse(None,None,stream)
+  
+  def data:BinaryResponse
   
   def processRequest{
     
-    val (contentType,content) = data
+    //val (contentType,content) = data
+    val response = data;
+    val content = response.stream;
     
-    WebRequest.httpResponse.setContentType(contentType)
+    WebRequest.httpResponse.setContentType(response.contentType getOrElse "application/octet-stream")
+    
+    for(value <- response.contentLength)
+      WebRequest.httpResponse.setContentLength(value)
+    
     val outputStream = WebRequest.httpResponse.getOutputStream
     try{
       val buffer = new Array[Byte](1024*16)
