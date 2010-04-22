@@ -430,6 +430,13 @@ class StringExtensions(value:String){
     new String(outCharArray)
   }
   
+  def splitOn(delimiters:String*):Array[String] = {
+    var lines = Array(value)
+    for(delimiter <- delimiters)
+      lines = lines flatMap {_.split(delimiter)}
+    lines
+  }
+  
   def stripQuotes = {
     val trimmed = value.trim
     if(trimmed.length < 2)
