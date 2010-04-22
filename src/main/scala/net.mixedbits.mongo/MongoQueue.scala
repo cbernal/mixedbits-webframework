@@ -62,7 +62,7 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
   }
   
   def totalEligible(time:DateTime):Long = 
-    collection.find(ClaimedBy == null and ScheduledTime <= time.toDate).count
+    collection.find(ScheduledTime <= time.toDate and ClaimedBy == null).count
     
   def totalEligible():Long = 
     totalEligible(DateTime.now)
@@ -185,14 +185,14 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
       }
     
     //claimed items that have exceeded the claim timeout
-    val timeoutClaimResult = findAndClaim(ClaimedBy != null and LastFinished == null and LastStarted <= (DateTime.now - queueClaimTimeout).toDate)
+    val timeoutClaimResult = findAndClaim(LastStarted <= (DateTime.now - queueClaimTimeout).toDate and LastFinished == null and ClaimedBy != null)
     
     timeoutClaimResult match {
       
       //if there weren't any timeout items to run, get a normal item
       case ItemMissed | NoItemFound =>
         //unclaimed items that area ready to run
-        findAndClaim(ClaimedBy == null and ScheduledTime <= new Date())
+        findAndClaim(ScheduledTime <= new Date() and ClaimedBy == null)
         
       //we claimed a timeout item, send notification, and then process the item
       case ItemClaimed(item) =>
