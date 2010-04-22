@@ -34,6 +34,8 @@ trait MongoFileProperties{
 
 object MongoFileChunk{
   object FileId extends JsAnyProperty("files_id")
+  object ChunkNumber extends JsAnyProperty("n")
+  object Data extends JsAnyProperty("data")
 }
 
 class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends MongoBaseCollection[MongoFile]{
