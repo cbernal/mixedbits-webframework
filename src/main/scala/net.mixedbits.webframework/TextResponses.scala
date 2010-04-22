@@ -1,5 +1,7 @@
 package net.mixedbits.webframework
 
+import javax.servlet.http._
+
 import scala.xml._
 
 import Tools._
@@ -10,17 +12,46 @@ trait TextResponse extends WebResponse{
   def get:(String,String)
   def post:(String,String)
   
-  def processRequest{
-    
+  def processRequest{    
+    writeContent(WebRequest.httpResponse)
+  }
+  
+  protected def writeContent(response:HttpServletResponse){
     val (contentType,content) = httpRequestMethod match {
       case "POST" => post
       case _ => get
     }
     
-    WebRequest.httpResponse.setContentType(contentType)
-    WebRequest.httpResponse.getWriter.write(content)
+    response.setContentType(contentType)
+    response.getWriter.write(content)
   }
   
+}
+
+trait GZipSupport extends TextResponse{
+  
+  override def processRequest{
+    
+    if(isGZipSupported(WebRequest.httpRequest)){
+      val wrappedResponse = new com.blogspot.java4it.commons.filters.gzip.GZipResponseWrapper(WebRequest.httpResponse)
+      try{
+        writeContent(wrappedResponse)
+      }
+      finally{
+        wrappedResponse.finishResponse();
+      }
+    }
+    else{
+      super.processRequest()
+    }
+
+  }
+  
+  private def isGZipSupported(req:HttpServletRequest):Boolean = {
+    val browserEncodings = req.getHeader("accept-encoding")
+    val supported = (browserEncodings != null && browserEncodings.indexOf("gzip") != -1)
+    return supported
+  }
 }
 
 trait PlainTextResponse extends TextResponse{
