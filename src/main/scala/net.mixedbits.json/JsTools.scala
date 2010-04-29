@@ -42,7 +42,9 @@ object JsTools{
   }
   
   def rawValue(value:Any):Any = 
-    if(value.isInstanceOf[JsObject])
+    if(value.isInstanceOf[Option[_]])
+      value.asInstanceOf[Option[_]].map(rawValue) getOrElse null
+    else if(value.isInstanceOf[JsObject])
       value.asInstanceOf[JsObject].obj
     else if(value.isInstanceOf[JsArray[_]])
       value.asInstanceOf[JsArray[_]].list
