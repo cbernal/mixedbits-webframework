@@ -80,10 +80,7 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
       db.setWriteConcern(originalWriteConcern)
       db.requestDone
     }
-  }
-  
-  def indexId():Unit = usingWriteConnection{_.ensureIDIndex()}
-  
+  }  
   
   def indexProperties(indicies:IndexLeft*) =
     index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
