@@ -28,6 +28,10 @@ class JsObject(baseObject:DBObject){
     property.readValue(obj)
   def apply[T](property:JsProperty[T],defaultValue:T):T =
     property.readValue(obj).getOrElse(defaultValue)
+  def apply(propertyName:String):Option[Any] = 
+    toOption(obj.get(propertyName)).map(JsTools.wrappedValue)
+  def apply(propertyName:String,default:Any):Option[Any] = 
+    toOption(obj.get(propertyName)).map(JsTools.wrappedValue) getOrElse default
   
   def update[T](property:JsProperty[T],value:T):this.type = {
     property.updateValue(obj,value)
