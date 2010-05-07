@@ -8,8 +8,10 @@ import java.util.Date
 import org.scala_tools.time._
 import org.scala_tools.time.Imports._
 
-abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) extends JsObjectProperty{
+abstract class MongoQueue[T <: JsDocument](collectionReference: => MongoBaseCollection[T]) extends JsObjectProperty{
   queue =>
+  
+  lazy val collection = collectionReference
   
   def this(collection:MongoBaseCollection[T],name:String) = {this(collection);propertyName(name)}
   def this(collection:MongoBaseCollection[T],parent:JsProperty[_]) = {this(collection);propertyName(parent.propertyName+"."+Objects.objectPath(this).last)}
@@ -283,6 +285,9 @@ abstract class MongoQueue[T <: JsDocument](collection:MongoBaseCollection[T]) ex
     enqueue(DateTime.now)
   def enqueue(processTime:DateTime):JsUpdate = 
     ScheduledTime <~ processTime.toDate and queue.UniqueId <~ JsTools.generateId and ClaimedBy <~ None
+  
+  def isEnqueued(item:T):Boolean = 
+    (item contains queue.ScheduledTime) && (item contains queue.UniqueId)
   
   def onItemSelected(item:T):MongoQueueResult
   
