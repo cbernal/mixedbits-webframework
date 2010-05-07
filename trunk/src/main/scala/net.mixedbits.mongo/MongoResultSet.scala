@@ -65,7 +65,7 @@ trait MongoUpdatableResultSet[T <: JsDocument]{
     }
 }
 
-class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
+class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsConstraint],resultTemplate:Option[JsPropertyGroup],numToSkip:Option[Int],maxResults:Option[Int],indexHint:Option[String],sortBy:Seq[(JsProperty[_],SortDirection)]) extends MongoResultSet[JsDocument](collection,constraint){
   protected def convertRawObject(rawObject:DBObject) = new JsDocument(rawObject)
   
   override protected lazy val cursor = {
@@ -84,6 +84,9 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
       
       for(value <- prepareSortBy)
         cursor = cursor.sort(value)
+      
+      for(hint <- indexHint)
+        cursor = cursor.hint(hint)
       
       cursor
     }
@@ -123,17 +126,20 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
   def select(newResultTemplate:JsPropertyGroup):MongoCollectionResultSet =
     select(toOption(newResultTemplate)) 
   def select(newResultTemplate:Option[JsPropertyGroup]):MongoCollectionResultSet = 
-    new MongoCollectionResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults,sortBy)
+    new MongoCollectionResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults,indexHint,sortBy)
   
   def skip(newSkipCount:Int):MongoCollectionResultSet =
     skip(toOption(newSkipCount))
   def skip(newSkipCount:Option[Int]):MongoCollectionResultSet =
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults,sortBy)
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults,indexHint,sortBy)
   
   def limit(newResultsCount:Int):MongoCollectionResultSet =
     limit(toOption(newResultsCount))
   def limit(newResultsCount:Option[Int]):MongoCollectionResultSet =
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount,sortBy)
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount,indexHint,sortBy)
+  
+  def hint(indexName:String):MongoCollectionResultSet = 
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,Some(indexName),sortBy)
   
   
   def sortBy(newSortBy:JsProperty[_]):MongoCollectionResultSet =
@@ -143,7 +149,7 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
   def sortDescending(newSortBy:JsProperty[_]):MongoCollectionResultSet =
     sortBy(newSortBy,SortDirection.Descending)
   def sortBy(newSortBy:JsProperty[_],direction:SortDirection):MongoCollectionResultSet = 
-    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,sortBy ++ List( (newSortBy,direction) ))
+    new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,maxResults,indexHint,sortBy ++ List( (newSortBy,direction) ))
     
 
   def distinct[T](property:JsProperty[T]):List[T] = 
@@ -174,10 +180,12 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
       }
     }
   }
+  
+  def explain() = new JsObject(cursor.explain())
 
 }
 
-class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[JsConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
+class MongoCollectionUpdateableResultSet(collection:MongoCollection,constraint:Option[JsConstraint]) extends MongoCollectionResultSet(collection,constraint,None,None,None,None,Nil) with MongoUpdatableResultSet[JsDocument]{
   def update(updates:JsUpdate):Long =
     updateCollection(collection)(updates)
   
