@@ -46,6 +46,10 @@ case class googleScriptLoader(scripts:(String,String,Option[String])*) extends I
     </script>
 }
 
+case class unparsedCode(code:String) extends IncludeFile{
+  def elements = Elements(Unparsed(code))
+}
+
 
 trait WebPage extends TextResponse{
   
