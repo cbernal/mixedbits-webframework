@@ -8,12 +8,14 @@ import com.mongodb._
 
 import scala.collection.mutable.ListBuffer
 
-trait MongoBaseCollection[T <: JsDocument]{
+trait MongoBaseCollection[T <: JsDocument] extends Iterable[T]{
   def count():Long
   
   def findOne(constraint:JsConstraint):Option[T]
   def findAll():MongoResultSet[T] with MongoUpdatableResultSet[T]
   def find(constraint:JsConstraint):MongoResultSet[T] with MongoUpdatableResultSet[T]
+  
+  def elements() = findAll().elements
   
   def removeById(id:String):Unit
   def remove(doc:T):Unit
