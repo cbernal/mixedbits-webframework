@@ -92,7 +92,17 @@ trait WebApplication extends Filter{
     var result:Option[PathMatcher] = None
     for(matcher <- pathsList; if matcher isDefinedAt path)
       result = Some(matcher)
-    result map { _(path) }
+    
+    //try to execute the handler, and process the exception in case there is an error
+    // this allows for normal page processing to occur during the matcher function
+    try{
+      result map { _(path) }
+    }
+    catch{
+      case e => 
+        processException(e,path)
+        None
+    }
   }
   
   private def showPage(page:WebResponse,path:String){
@@ -102,39 +112,49 @@ trait WebApplication extends Filter{
         page.processRequest()
       }
       catch{
-        
-        case WebResponseRedirect(redirectType,location) =>
-          val HttpRedirect(code) = redirectType
-          WebResponse.responseCode(code)
-          WebResponse.responseHeader("Location",location)
-          
-        case WebResponseForwardPage(newPath) =>
-          //detect explicit request for different page
-          findPage(newPath) match {
-            
-            //handle it internally
-            case Some(webPage) =>
-              return showPage(webPage,newPath)
-            
-            //let the container handle it...
-            case None =>
-              return context.getRequestDispatcher(newPath)
-                            .forward(WebRequest.httpRequest, WebRequest.httpResponse)
-            
-          }
-          
-        case e if e == WebResponseContinueJ2EEProcessing =>
-          throw WebResponseContinueJ2EEProcessing
-        
-        case e if e == WebResponseNotFoundException => 
-          //detect explicit request for not found page
-          showPage(notFoundPage,path)
-
+        case e => processException(e,path)
       }
       finally{
         page.runAfterActions()
       }
     }
+  }
+  
+  private def processException(exception:Throwable,path:String):Unit = exception match {
+    case WebResponseRedirect(redirectType,location) =>
+      val HttpRedirect(code) = redirectType
+      WebResponse.responseCode(code)
+      WebResponse.responseHeader("Location",location)
+    
+    case WebResponseForwardPage(newPage) =>
+      return showPage(newPage,path)
+      
+    case WebResponseForwardPath(newPath) =>
+      //detect explicit request for different page
+      findPage(newPath) match {
+        
+        //handle it internally
+        case Some(webPage) =>
+          return showPage(webPage,newPath)
+        
+        //let the container handle it...
+        case None =>
+          return context.getRequestDispatcher(newPath)
+                        .forward(WebRequest.httpRequest, WebRequest.httpResponse)
+        
+      }
+      
+    case e if e == WebResponseContinueJ2EEProcessing =>
+      throw WebResponseContinueJ2EEProcessing
+    
+    case e if e == WebResponseNotFoundException => 
+      //detect explicit request for not found page
+      showPage(notFoundPage,path)
+      
+    case e =>
+      println("Unknown exception in WebApplication")
+      e.printStackTrace
+      throw e
   }
 }
 
