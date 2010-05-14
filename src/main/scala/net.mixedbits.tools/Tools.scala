@@ -322,6 +322,9 @@ class CacheMap[K,V](generator: K=>V) extends Function1[K,V]{
   
   def cacheValues = map.toArray
   
+  def invalidate(key:K) = 
+    map -= key
+  
   def apply(key:K):V = {
     if(!map.contains(key))
       map(key) = generator(key)
@@ -334,6 +337,11 @@ class CacheMulti[K,V](duration:Duration,generator: K=>V){
   import scala.collection.mutable._
   
   private val map = Map[K,Cache[V]]()
+  
+  def keys = map.keys
+  
+  def invalidate(key:K) = 
+    map -= key
   
   def apply(key:K):V = {
     if(!map.contains(key))
