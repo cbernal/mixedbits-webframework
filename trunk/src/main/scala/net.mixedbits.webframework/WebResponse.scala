@@ -4,13 +4,15 @@ import scala.collection.mutable._
 
 object WebResponseContinueJ2EEProcessing extends Exception
 object WebResponseNotFoundException extends Exception
-case class WebResponseForwardPage(path:String) extends Exception
+case class WebResponseForwardPath(path:String) extends Exception
+case class WebResponseForwardPage(page:WebResponse) extends Exception
 case class WebResponseRedirect(redirectType:HttpRedirect,location:String) extends Exception
 
 object WebResponse{
   def continueJ2EEProcessing[T]():T = {throw WebResponseContinueJ2EEProcessing}
   def notFound[T]():T = {throw WebResponseNotFoundException}
-  def forward[T](path:String):T = {throw WebResponseForwardPage(path)}
+  def forward[T](path:String):T = {throw WebResponseForwardPath(path)}
+  def forward[T](page:WebResponse):T = {throw WebResponseForwardPage(page)}
   def redirect[T](redirectType:HttpRedirect,location:String):T = {throw WebResponseRedirect(redirectType,location)}
   def responseCode(code:Int) = 
     WebRequest.httpResponse.setStatus(code)
@@ -27,6 +29,7 @@ trait WebResponse{
   def continueJ2EEProcessing[T]():T = WebResponse.continueJ2EEProcessing[T]
   def notFound[T]():T = WebResponse.notFound[T]
   def forward[T](path:String):T = WebResponse.forward[T](path)
+  def forward[T](page:WebResponse):T = WebResponse.forward[T](page)
   def redirect[T](redirectType:HttpRedirect,location:String):T = WebResponse.redirect[T](redirectType,location)
     
   def httpRequestMethod():String = WebRequest.httpRequest.getMethod
