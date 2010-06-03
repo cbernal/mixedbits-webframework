@@ -239,7 +239,7 @@ class MongoFile(baseObject:GridFSDBFile,val database:MongoDatabase) extends JsDo
   def readAllText(encoding:String) = IO.readAllText(inputStream,encoding)
   
   def contentType():String = 
-    this(MongoFile.ContentType) getOrElse MimeTypes.getContentTypeForName(name)
+    this(MongoFile.ContentType) filter {_ != ""} getOrElse MimeTypes.getContentTypeForName(name)
 }
 
 object MongoFile extends MongoFileProperties
