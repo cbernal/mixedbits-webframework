@@ -1,6 +1,6 @@
 package net.mixedbits.webframework
 
-sealed abstract case class HttpRedirect(code:Int)
+sealed abstract class HttpRedirect(val code:Int)
 object HttpRedirect{
   case object Permanent extends HttpRedirect(301)
   case object Found extends HttpRedirect(302)
