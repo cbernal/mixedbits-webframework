@@ -58,11 +58,11 @@ class JsUpdateGroup extends JsUpdate{
 class JsPropertyUpdate(key:String,operation:String,value:Any,applicator:JsObject=>Any) extends JsUpdate{
   def applyToObject(obj:JsObject) = {applicator(obj);obj}
   def applyToUpdateObject(obj:BasicDBObject):BasicDBObject = {
-    
-    if(obj.containsKey(operation))
-      obj.get(operation).asInstanceOf[BasicDBObject].put(key,value)
-    else
-      obj.put(operation,new BasicDBObject(key,value))
+
+    obj.get(operation) match {
+      case null => obj.put(operation,new BasicDBObject(key,value))
+      case existingObject:BasicDBObject => existingObject.put(key,value)
+    }
 
     obj
   }
