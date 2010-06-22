@@ -6,6 +6,22 @@ import scala.collection.mutable._
 
 import net.mixedbits.tools._
 
+class WebApplicationLoader extends Filter{
+  private var app:Filter = null
+  
+  def init(config:FilterConfig){
+    app = net.mixedbits.tools.Module.forName[Filter](config.getInitParameter("app")).get
+    app.init(config)
+  }
+  
+  def destroy{app.destroy}
+  
+  def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain){
+    app.doFilter(request,response,chain)
+  }
+  
+}
+
 trait WebApplication extends Filter{
   
   val notFoundPage:WebResponse
@@ -69,7 +85,7 @@ trait WebApplication extends Filter{
         }      
         
         //detect lack of file and show custom not found page
-        if(!new java.io.File(httpRequest.getRealPath(path)).exists)
+        if(!new java.io.File(context.getRealPath(path)).exists)
           return showPage(notFoundPage,path)
         
       }
@@ -122,12 +138,11 @@ trait WebApplication extends Filter{
   
   private def processException(exception:Throwable,path:String):Unit = exception match {
     case WebResponseRedirect(redirectType,location) =>
-      val HttpRedirect(code) = redirectType
-      WebResponse.responseCode(code)
+      WebResponse.responseCode(redirectType.code)
       WebResponse.responseHeader("Location",location)
     
     case WebResponseForwardPage(newPage) =>
-      return showPage(newPage,path)
+      showPage(newPage,path)
       
     case WebResponseForwardPath(newPath) =>
       //detect explicit request for different page
@@ -135,11 +150,11 @@ trait WebApplication extends Filter{
         
         //handle it internally
         case Some(webPage) =>
-          return showPage(webPage,newPath)
+          showPage(webPage,newPath)
         
         //let the container handle it...
         case None =>
-          return context.getRequestDispatcher(newPath)
+          context.getRequestDispatcher(newPath)
                         .forward(WebRequest.httpRequest, WebRequest.httpResponse)
         
       }
