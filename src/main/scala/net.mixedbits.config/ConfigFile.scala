@@ -20,7 +20,7 @@ class ConfigFile(defaultFile:File,alternateFiles:File*) extends ValNameProvider 
   val possibleConfigFiles = Array(defaultFile) ++ alternateFiles
   
   //select the first file that exists
-  val selectedConfigFile = possibleConfigFiles.filter(_.exists).firstOption 
+  val selectedConfigFile = possibleConfigFiles.filter(_.exists).headOption 
   
   private lazy val configProperties = 
     for(file <- selectedConfigFile)

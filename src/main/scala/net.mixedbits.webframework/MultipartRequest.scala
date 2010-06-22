@@ -103,8 +103,8 @@ trait BufferedMultipartRequest extends WebRequest{
     val formFiles = new ArrayBuffer[(String,MultipartBufferedFile)]
     
     StreamingMultipartRequest.onMultipartRequest(
-      field => formValues += (field.fieldName,field.value),
-      file => formFiles += (file.fieldName,buffer(file))
+      field => formValues += field.fieldName -> field.value,
+      file => formFiles += file.fieldName -> buffer(file)
     )
     
     
