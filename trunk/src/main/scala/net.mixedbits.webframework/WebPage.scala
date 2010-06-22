@@ -8,50 +8,46 @@ abstract class IncludeFile{
   def elements:Elements
 }
 
-case class css(filename:String) extends IncludeFile{
-  def elements = 
-    <link rel="stylesheet" type="text/css" href={filename} />
-}
-
-case class script(filename:String) extends IncludeFile{
-  def elements = 
-    <script type="text/javascript" src={filename}></script>
-}
-
-case class scriptBody(body:String) extends IncludeFile{
-  def elements = 
-    <script type="text/javascript">{Unparsed(body)}</script>
-}
-
-case class rss(filename:String) extends IncludeFile{
-  def elements = 
-    <link rel="alternate" type="application/rss+xml" title="RSS" href={filename} />
-}
-
-//documented at http://code.google.com/apis/ajax/documentation/
-case class googleScriptLoader(scripts:(String,String,Option[String])*) extends IncludeFile{
-  def elements = 
-    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
-    <script type="text/javascript">
-    {
-      scripts.map{
-        case (script,version,settings) => 
-        settings match{
-          case Some(value) => "google.load('"+script+"','"+version+"',"+value+");"
-          case None => "google.load('"+script+"','"+version+"');"
-        }
-      }.mkString("\n")
-        
-    }
-    </script>
-}
-
-case class unparsedCode(code:String) extends IncludeFile{
-  def elements = Elements(Unparsed(code))
-}
-
-
 trait WebPage extends TextResponse{
+  
+  case class css(filename:String) extends IncludeFile{
+    def elements = <link rel="stylesheet" type="text/css" href={filename} />
+  }
+  
+  case class script(filename:String) extends IncludeFile{
+    def elements = <script type="text/javascript" src={filename}></script>
+  }
+  
+  case class scriptBody(body:String) extends IncludeFile{
+    def elements = <script type="text/javascript">{Unparsed(body)}</script>
+  }
+  
+  case class rss(filename:String) extends IncludeFile{
+    def elements = <link rel="alternate" type="application/rss+xml" title="RSS" href={filename} />
+  }
+  
+  //documented at http://code.google.com/apis/ajax/documentation/
+  case class googleScriptLoader(scripts:(String,String,Option[String])*) extends IncludeFile{
+    def elements = 
+      <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+      <script type="text/javascript">
+      {
+        scripts.map{
+          case (script,version,settings) => 
+          settings match{
+            case Some(value) => "google.load('"+script+"','"+version+"',"+value+");"
+            case None => "google.load('"+script+"','"+version+"');"
+          }
+        }.mkString("\n")
+          
+      }
+      </script>
+  }
+  
+  case class unparsedCode(code:String) extends IncludeFile{
+    def elements = Elements(Unparsed(code))
+  }
+  
   
   def get = contentType -> html
   def post = contentType -> html
@@ -87,7 +83,7 @@ trait WebPage extends TextResponse{
         </head>
         {body}
       </html>
-      ,false,false)
+      )
   
   def body:Elements
   
