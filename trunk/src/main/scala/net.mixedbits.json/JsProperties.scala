@@ -82,10 +82,10 @@ sealed trait JsProperty[T]{
   
   //update operators
   def <~ (value:T):JsUpdate = 
-    new JsPropertyUpdate(this.propertyName,"$set",value,(obj=> obj(this) = value))
+    new JsPropertyUpdate(this.propertyName,"$set",JsTools.rawValue(value),(obj=> obj(this) = value))
   
   def <~ (value:Option[T]):JsUpdate = value match {
-    case Some(v) => new JsPropertyUpdate(this.propertyName,"$set",v,(obj=> obj(this) = v))
+    case Some(v) => new JsPropertyUpdate(this.propertyName,"$set",JsTools.rawValue(v),(obj=> obj(this) = v))
     case None => new JsPropertyUpdate(this.propertyName,"$set",null,(obj=> obj(this) = None))//new JsPropertyUpdate(this.propertyName,"$unset",1) //not supported yet...
   }
   

@@ -48,10 +48,10 @@ class JsPropertyConstraint(key:String,operation:String,value:Any) extends JsCons
     if(operation == null || operation == "")
       obj.put(key,value)
     else{
-      if(obj.containsKey(key))
-        obj.get(key).asInstanceOf[BasicDBObject].put(operation,value)
-      else
-        obj.put(key,new BasicDBObject(operation,value))
+      obj.get(key) match {
+        case null => obj.put(key,new BasicDBObject(operation,value))
+        case existingObject:BasicDBObject => existingObject.put(operation,value)
+      }
     }
     obj
   }
