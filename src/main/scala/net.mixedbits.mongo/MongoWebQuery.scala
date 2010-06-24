@@ -134,7 +134,7 @@ trait MongoWebQuery{
                   if parts(0)+":"+parts(1) == param
                   ) yield parts(2)
         if(result.size == 1)
-          result.first
+          result.head
         else
           ""
       }).filter(_!="")

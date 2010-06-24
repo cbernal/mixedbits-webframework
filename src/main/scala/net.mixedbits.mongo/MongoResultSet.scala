@@ -23,14 +23,15 @@ abstract class MongoResultSet[T <: JsDocument](collection:MongoCollection,constr
   
   def count = size
   def length = size
-  def size = totalCount
+  override def size = totalCount
   def totalCount = cursor.count
   
-  def elements = new Iterator[T]{
+  def iterator = new Iterator[T]{
     private lazy val internalIterator = cursor.iterator // cursor
     def next():T = convertRawObject(internalIterator.next)
     def hasNext():Boolean = internalIterator.hasNext
   }
+  
 
 }
 
@@ -97,7 +98,7 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
     val skip = numToSkip.getOrElse(0)
     val total = totalCount - skip
     //if no max results, just return the total, if max results is less than the total, return max results otherwise return the total
-    Math.min(maxResults.getOrElse(total),total)
+    math.min(maxResults.getOrElse(total),total)
   }
   
   protected def templateToDBObject = {
@@ -164,13 +165,13 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
   def random(maxItems:Int):Iterator[JsDocument] = {
     val totalItems = count.toInt
     if(totalItems <= maxItems)
-      elements
+      iterator
     else{
       new Iterator[JsDocument]{
         val indexes = Sequences.randomSet(maxItems,0,totalItems - 1)
         var currentIndex = 0
         def next():JsDocument = {
-          val result = skip(indexes(currentIndex)).limit(1).elements.next
+          val result = skip(indexes(currentIndex)).limit(1).iterator.next
           
           currentIndex += 1
           
