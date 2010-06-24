@@ -15,7 +15,7 @@ class ValNameFinder(obj:AnyRef){
                 .map(method => Pair(method.getName,method.invoke(obj)))
                 
     def apply(item:AnyRef) = 
-      map.filter{_._2 eq item}.map{_._1}.firstOption
+      map.filter{_._2 eq item}.map{_._1}.headOption
   }
   
   val valMap = Map[Class[_],ValCache]()
