@@ -20,7 +20,7 @@ class FileWatcher(files: =>Seq[File]){
   }
   
   def currentFiles():Seq[File] = {
-    oldModifiedTimes.keySet.toArray
+    oldModifiedTimes.keySet.toList
   }
 
   def modifiedFiles():Seq[File] = {
@@ -39,5 +39,7 @@ class FileWatcher(files: =>Seq[File]){
   
   def isUpToDate() = 
     findModifiedFiles(oldModifiedTimes,files).size == 0
+  
+  def readUpdates(){ hasUpdates }
 
 }
