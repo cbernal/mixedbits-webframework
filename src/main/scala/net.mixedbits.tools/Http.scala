@@ -7,7 +7,7 @@ import Objects._
 import java.io._
 import java.net.URLEncoder.encode
 
-import scala.collection.mutable._
+import scala.collection.mutable.{Seq => _,_}
 
 import org.apache.commons.httpclient._
 import org.apache.commons.httpclient.methods._
@@ -65,7 +65,7 @@ class HttpRequest private[tools](requestMethod:String,url:String){
       _headerValues(index) = (header,value)
     //add value
     else if(value != null)
-      _headerValues += (header,value)
+      _headerValues += header -> value
 
     //store special headers
     if(Http.ContentLength.equalsIgnoreCase(header))
@@ -315,7 +315,7 @@ class HttpResponse private[tools](method:HttpMethod,bufferResponse:Boolean){
 
 class HttpContext private[tools](){
   private val history = new ListBuffer[(String,String)]
-  private[tools] def visitUrl(url:String,reason:String) = history += (url,reason)
+  private[tools] def visitUrl(url:String,reason:String) = history += url -> reason
   private[tools] val httpState = new HttpState;
 }
 

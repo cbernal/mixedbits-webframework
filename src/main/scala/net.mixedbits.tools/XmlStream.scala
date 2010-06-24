@@ -72,7 +72,7 @@ class XmlStream{
     //remove this context
     contextStack.pop
     //select the new current context
-    currentContext = contextStack.peek
+    currentContext = contextStack.top
     //this wasn't our event, notify the new context
     currentContext.endElement
   }
@@ -112,7 +112,7 @@ class XmlStream{
   }
   
   private class TextContext(matcher:PartialFunction[(String,Attributes),(String=>Any)],name:String) extends SelectContext(matcher,name){
-    var buffer:StringBuilder = null
+    var buffer:java.lang.StringBuilder = null
     
     def onComplete(value: =>String) =
       if(matcherResult!=null){
@@ -122,7 +122,7 @@ class XmlStream{
       }
 
     override def startElement(name:String,attributes:Attributes) = {
-      buffer = new StringBuilder
+      buffer = new java.lang.StringBuilder
       super.startElement(name,attributes)
     }
       
