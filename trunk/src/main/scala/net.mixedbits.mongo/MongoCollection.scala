@@ -15,7 +15,7 @@ trait MongoBaseCollection[T <: JsDocument] extends Iterable[T]{
   def findAll():MongoResultSet[T] with MongoUpdatableResultSet[T]
   def find(constraint:JsConstraint):MongoResultSet[T] with MongoUpdatableResultSet[T]
   
-  def elements() = findAll().elements
+  def iterator() = findAll().iterator
   
   def removeById(id:String):Unit
   def remove(doc:T):Unit
@@ -78,11 +78,17 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     try{
       f(db,db.getCollection(collectionName))
     }
+    //catch{
+    //  case error:MongoException#Network =>
+    //    database.failover()
+    //    usingWriteConnection(f)
+    //  case _ => ()
+    //}
     finally{
       db.setWriteConcern(originalWriteConcern)
       db.requestDone
     }
-  }  
+  }
   
   def indexProperties(indicies:IndexLeft*) =
     index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
