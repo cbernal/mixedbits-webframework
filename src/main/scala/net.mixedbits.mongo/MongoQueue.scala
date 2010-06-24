@@ -2,6 +2,7 @@ package net.mixedbits.mongo
 
 import net.mixedbits.json._
 import net.mixedbits.tools._
+import net.mixedbits.tools.Objects._
 import net.mixedbits.tools.BlockStatements._
 import java.util.Date
 
@@ -116,6 +117,8 @@ abstract class MongoQueue[T <: JsDocument](collectionReference: => MongoBaseColl
     }
   }
   
+  lazy val queueName = Objects.simpleClassName(this)
+  
   private def createThread() = daemonThread{
     onStart()
     
@@ -158,26 +161,35 @@ abstract class MongoQueue[T <: JsDocument](collectionReference: => MongoBaseColl
     }
     
     onStop()
-  }
+  } |>> {_.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler{
+    def uncaughtException( t:Thread, e:Throwable){
+      println("queue died:"+queueName)
+      e.printStackTrace()
+    }
+  })}
+   
   
   private def nextItem():NextItemResult = {
     def findAndClaim(criteria:JsConstraint) = 
       //find items and ensure that they were properly claimed here
       collection.findOne(criteria) match {
         case Some(item) =>
+          
+          val markAsClaimed = queue.UniqueId <~ JsTools.generateId() and
+                            ClaimedBy <~ serverName and
+                            LastStarted <~ new Date() and
+                            LastFinished <~ None
+
           //ensure that we have all appropriate fields, then attempt to use them to update the item database, thereby "claiming" the item
           val claimedItem = for(
                               itemId <- item(JsDocument.Id);
                               uniqueId <- item(queue.UniqueId);
-                              updated = collection.find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
-                                              .updateFirst(
-                                                  queue.UniqueId <~ JsTools.generateId() and
-                                                  ClaimedBy <~ serverName and
-                                                  LastStarted <~ new Date() and
-                                                  LastFinished <~ None
-                                                  )
+                              updated = collection
+                                              .find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
+                                              .updateFirst(markAsClaimed)
                               if updated
                               ) yield item
+
           claimedItem match {
             case Some(item) => ItemClaimed(item)
             case None => ItemMissed
