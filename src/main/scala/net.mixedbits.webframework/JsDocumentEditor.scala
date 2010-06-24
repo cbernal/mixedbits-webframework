@@ -43,10 +43,22 @@ trait JsDocumentEditor{
   protected def saveError(messages:Seq[String]){ _saveResult = SaveError(messages) }
   protected def validateError(messages:Seq[String]){ _validateResult = ValidateError(messages) }
   
-  def conditions(messages:Option[String]*){
+  def conditions(messages:Iterable[String]*){
     val list:Seq[String] = for(item <- messages; message <- item) yield message
     if(list.size > 0)
       validateError(list)
+  }
+  
+  def includeIf(condition:Boolean)(messages:Iterable[String]*):Iterable[String] = {
+    
+    if(!condition)
+      return Nil
+    
+    var results = new collection.mutable.ListBuffer[String]
+    for(messageList <- messages; message <- messageList)
+      results += message
+    
+    results
   }
   
   def failIf(failCondition:Boolean)(errorMessage:String):Option[String] = if(failCondition) Some(errorMessage) else None
@@ -63,45 +75,62 @@ trait JsDocumentEditor{
   def saveResults(body:PartialFunction[SaveResult,Elements]):Elements = 
     if(body.isDefinedAt(saveResult)) body(saveResult) else Elements()
   
-  trait Property{
-    def readValue():String
-    def applyUpdates():Unit
+  private var properties = new scala.collection.mutable.ArrayBuffer[Property[_]]
+
+  trait Property[T]{
+    properties += this
+    
+    protected var _oldValue:T = _
+    protected var _value:T = _
     
     def resolve(update:Boolean){
       _oldValue = readValue()
       
-      if(update)
+      if(update){
         applyUpdates()
-      
-      _value = readValue()
+        _value = readValue()
+      }
+      else{
+        _value = _oldValue
+      }
     }
     
+    def apply():T = _value
     
-    private var _oldValue:String = null
+    def readValue():T
+    def applyUpdates():Unit
+  }
+
+  trait StringProperty extends Property[String]{
+    
     def oldValue = _oldValue
     
     def hasChanged = _oldValue != _value
     
-    private var _value:String = null    
-    def apply():String = _value
     override def toString() = _value
   }
   
-  private var properties = new scala.collection.mutable.ArrayBuffer[Property]
-
-  def property[T](property:JsProperty[T],paramName:String) = new Property(){
-    
-    properties += this
+  def property[T](property:JsProperty[T],paramName:String) = new StringProperty(){
     
     def applyUpdates(){
       document(property) = param(paramName).flatMap(property.fromString)
     }
     
-    def readValue() = {      
+    def readValue() = {
       document(property).map(_.toString) getOrElse ""
     }
   }
   
+  def property(paramName:String)(update: Option[String] => Unit)(read: => String) = new StringProperty{
+    def applyUpdates(){ update(param(paramName)) }
+    def readValue() = read
+  }
+
+  def arrayProperty(paramName:String)(update: Array[String] => Unit)(read: => Array[String]) = new Property[Array[String]]{
+    def applyUpdates(){ update(params(paramName)) }
+    def readValue() = read
+  }
+
   
   onBefore{
     
