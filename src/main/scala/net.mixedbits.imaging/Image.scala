@@ -174,21 +174,21 @@ class Image private(val image:RenderedImage){
     val (drawX, cropX, cropWidth) = 
       if(position.x < 0){
         val cropMax					= this.width()+position.x; 
-        (0,-position.x,Math.min(cropMax,newWidth))
+        (0,-position.x,math.min(cropMax,newWidth))
         }
       else{
         val displayMax				= newWidth-position.x;
-        (position.x,0,Math.min(displayMax,this.width()))
+        (position.x,0,math.min(displayMax,this.width()))
         }
     
     val (drawY, cropY, cropHeight) = 
       if(position.y < 0){
         val cropMax					= this.height()+position.y;
-        (0,-position.y,Math.min(cropMax,newHeight))
+        (0,-position.y,math.min(cropMax,newHeight))
         }
       else{
         val displayMax				= newHeight-position.y;
-        (position.y,0,Math.min(displayMax,this.height()))
+        (position.y,0,math.min(displayMax,this.height()))
         }
     
     if(cropWidth <= 0 || cropHeight <= 0)
@@ -216,21 +216,21 @@ class Image private(val image:RenderedImage){
     val (drawX,cropX,cropWidth) = 
       if(offsetX < 0){
         val cropMax = bufferedOverlay.getWidth()+offsetX;
-        (0,-offsetX,Math.min(cropMax,bufferedImage.getWidth()))
+        (0,-offsetX,math.min(cropMax,bufferedImage.getWidth()))
       }
       else{
         val displayMax = bufferedImage.getWidth()-offsetX;
-        (offsetX,0,Math.min(displayMax,bufferedOverlay.getWidth()))
+        (offsetX,0,math.min(displayMax,bufferedOverlay.getWidth()))
       }
     
     val (drawY,cropY,cropHeight) = 
       if(offsetY < 0){ 
         val cropMax = bufferedOverlay.getHeight()+offsetY
-        (0,-offsetY,Math.min(cropMax,bufferedImage.getHeight()))
+        (0,-offsetY,math.min(cropMax,bufferedImage.getHeight()))
       }
       else{
         val displayMax = bufferedImage.getHeight()-offsetY
-        (offsetY,0,Math.min(displayMax,bufferedOverlay.getHeight()))
+        (offsetY,0,math.min(displayMax,bufferedOverlay.getHeight()))
       }
     
     if(cropWidth <= 0 || cropHeight <= 0)
@@ -298,7 +298,7 @@ class Image private(val image:RenderedImage){
     var sum = 0.0f
     for(i <- 0 until diameter){
       val d:Float = i - radius
-      val value:Float = Math.exp(-d*d*invrsq).toFloat
+      val value:Float = math.exp(-d*d*invrsq).toFloat
       gaussianData(i) = value
       sum += value
     }
