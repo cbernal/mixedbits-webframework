@@ -170,50 +170,56 @@ abstract class MongoQueue[T <: JsDocument](collectionReference: => MongoBaseColl
    
   
   private def nextItem():NextItemResult = {
-    def findAndClaim(criteria:JsConstraint) = 
-      //find items and ensure that they were properly claimed here
-      collection.findOne(criteria) match {
-        case Some(item) =>
+    try {
+
+      def findAndClaim(criteria:JsConstraint) = 
+        //find items and ensure that they were properly claimed here
+        collection.findOne(criteria) match {
+          case Some(item) =>
+            
+            val markAsClaimed = queue.UniqueId <~ JsTools.generateId() and
+                              ClaimedBy <~ serverName and
+                              LastStarted <~ new Date() and
+                              LastFinished <~ None
+  
+            //ensure that we have all appropriate fields, then attempt to use them to update the item database, thereby "claiming" the item
+            val claimedItem = for(
+                                itemId <- item(JsDocument.Id);
+                                uniqueId <- item(queue.UniqueId);
+                                updated = collection
+                                                .find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
+                                                .updateFirst(markAsClaimed)
+                                if updated
+                                ) yield item
+  
+            claimedItem match {
+              case Some(item) => ItemClaimed(item)
+              case None => ItemMissed
+            }
+          case None =>
+            NoItemFound
+        }
+      
+      //claimed items that have exceeded the claim timeout
+      val timeoutClaimResult = findAndClaim(LastStarted <= (DateTime.now - queueClaimTimeout).toDate and LastFinished == null and ClaimedBy != null)
+      
+      timeoutClaimResult match {
+        
+        //if there weren't any timeout items to run, get a normal item
+        case ItemMissed | NoItemFound =>
+          //unclaimed items that area ready to run
+          findAndClaim(ScheduledTime <= new Date() and ClaimedBy == null)
           
-          val markAsClaimed = queue.UniqueId <~ JsTools.generateId() and
-                            ClaimedBy <~ serverName and
-                            LastStarted <~ new Date() and
-                            LastFinished <~ None
-
-          //ensure that we have all appropriate fields, then attempt to use them to update the item database, thereby "claiming" the item
-          val claimedItem = for(
-                              itemId <- item(JsDocument.Id);
-                              uniqueId <- item(queue.UniqueId);
-                              updated = collection
-                                              .find(JsDocument.Id == itemId and queue.UniqueId == uniqueId)
-                                              .updateFirst(markAsClaimed)
-                              if updated
-                              ) yield item
-
-          claimedItem match {
-            case Some(item) => ItemClaimed(item)
-            case None => ItemMissed
-          }
-        case None =>
-          NoItemFound
+        //we claimed a timeout item, send notification, and then process the item
+        case ItemClaimed(item) =>
+          
+          onClaimTimeout(item)
+        
+          timeoutClaimResult
       }
     
-    //claimed items that have exceeded the claim timeout
-    val timeoutClaimResult = findAndClaim(LastStarted <= (DateTime.now - queueClaimTimeout).toDate and LastFinished == null and ClaimedBy != null)
-    
-    timeoutClaimResult match {
-      
-      //if there weren't any timeout items to run, get a normal item
-      case ItemMissed | NoItemFound =>
-        //unclaimed items that area ready to run
-        findAndClaim(ScheduledTime <= new Date() and ClaimedBy == null)
-        
-      //we claimed a timeout item, send notification, and then process the item
-      case ItemClaimed(item) =>
-        
-        onClaimTimeout(item)
-      
-        timeoutClaimResult
+    } catch {
+      case e => NoItemFound
     }
   }
   
