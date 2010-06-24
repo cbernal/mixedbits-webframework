@@ -41,10 +41,10 @@ trait StringsImports{
 }
 
 object Sequences extends SequencesImports{
-  def sort[T](list:Array[T])(compareFunction:(T,T) => Boolean):Array[T] = scala.util.Sorting.stableSort(list,compareFunction)
+  def sort[T:Manifest](list:Array[T])(compareFunction:(T,T) => Boolean):Array[T] = scala.util.Sorting.stableSort(list,compareFunction)
   
   def randomSet(count:Int,min:Int,max:Int):List[Int] = {
-    val resultsCount = Math.min(count,Math.abs(max-min))
+    val resultsCount = math.min(count,math.abs(max-min))
     val results = new scala.collection.mutable.ListBuffer[Int]
     while(results.size < resultsCount){
       val newValue = MiscTools.randomInt(min,max)
@@ -57,17 +57,12 @@ object Sequences extends SequencesImports{
 trait SequencesImports{
   
   implicit def javaEnumerationToScalaIterator[A](it : java.util.Enumeration[A]) =
-    new scala.collection.jcl.MutableIterator.Wrapper(
-      new java.util.Iterator[A]{
-        def hasNext = it.hasMoreElements
-        def next = it.nextElement
-        def remove(){throw new UnsupportedOperationException()}
-      }
-    )
+    scala.collection.JavaConversions.asIterator(it)
 
-  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) = new scala.collection.jcl.MutableIterator.Wrapper(it)
+  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) =
+    scala.collection.JavaConversions.asIterator(it)
 
-  implicit def sequenceExtensions[T](value:Seq[T]) = new SequenceExtensions(value)
+  implicit def sequenceExtensions[T:Manifest](value:Seq[T]) = new SequenceExtensions(value)
 }
 
 object Dates extends DatesImports{
@@ -154,12 +149,13 @@ object Files extends FilesImports{
   }
   
   def findAll(dir:File,predicate:File=>Boolean):List[File] = {
-    val (allFiles,dirs) = List(dir.listFiles:_*).partition(_.isFile)
-    List.flatten(for(subdir <- dirs) yield findAll(subdir,predicate)) ::: (allFiles.filter(predicate)) ::: Nil
+    val list = Option(dir.listFiles) getOrElse Array[File]()
+    val (allFiles,dirs) = List(list:_*).partition(_.isFile)
+    (for(subdir <- dirs) yield findAll(subdir,predicate)).flatten ::: (allFiles.filter(predicate)) ::: Nil
   }
   
   def findAll(dirs:Seq[File],predicate:File=>Boolean):List[File] = 
-    List.flatten(for(dir <- dirs.toList) yield findAll(dir,predicate))
+    (for(dir <- dirs.toList) yield findAll(dir,predicate)).flatten
   
   def findAll(dir:File,extension:String):List[File] = 
     findAll(dir,{f:File => f.getName endsWith extension})
@@ -449,7 +445,7 @@ class StringExtensions(value:String){
     val trimmed = value.trim
     if(trimmed.length < 2)
       trimmed
-    else (trimmed.first,trimmed.last) match {
+    else (trimmed.head,trimmed.last) match {
       case ('"','"') | ('\'','\'') => trimmed.substring(1,trimmed.length-1).trim
       case _ => trimmed
     }
@@ -466,7 +462,7 @@ class StringExtensions(value:String){
   private def parseSegmentBefore(value:String, search:String) = { val index = value.indexOf(search); value.substring(0,index) }
 }
 
-class SequenceExtensions[T](items:Seq[T]){
+class SequenceExtensions[T:Manifest](items:Seq[T]){
   import scala.util.Sorting
   def sort(compareFunction:(T,T) => Boolean):Seq[T] = Sorting.stableSort(items,compareFunction)
   def sortOn[C <% Ordered[C]](compareField: T=>C) = Sorting.stableSort(items,(a:T,b:T) => compareField(a) < compareField(b))
@@ -586,7 +582,7 @@ trait PasswordsImports{
   private val upperAlphabet = ('A' to 'Z').toList
   
   private val vowels = "aeiou".toList
-  private val consonants = alphabet -- vowels
+  private val consonants = alphabet filterNot (vowels contains) // alphabet -- vowels
   
   private val defaultPasswordCharacters = numbers ++ symbols ++ alphabet ++ upperAlphabet
   
