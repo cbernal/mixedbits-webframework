@@ -1,12 +1,12 @@
 package net.mixedbits.json
 
 import com.mongodb._
-
+import org.bson.types._
 
 object JsTools{
   
   def generateId():String =
-    new com.mongodb.ObjectId().toString()
+    new ObjectId().toString()
   
   def marshalId(value:String):AnyRef = { 
     if(value == null || value.length != 24)
@@ -41,15 +41,13 @@ object JsTools{
     currentObject
   }
   
-  def rawValue(value:Any):Any = 
-    if(value.isInstanceOf[Option[_]])
-      value.asInstanceOf[Option[_]].map(rawValue) getOrElse null
-    else if(value.isInstanceOf[JsObject])
-      value.asInstanceOf[JsObject].obj
-    else if(value.isInstanceOf[JsArray[_]])
-      value.asInstanceOf[JsArray[_]].list
-    else
-      value
+  def rawValue(value:Any):Any = value match {
+    case null => null
+    case option:Option[_] => option.map(rawValue) getOrElse null
+    case obj:JsObject => obj.obj
+    case array:JsArray[_] => array.list
+    case _ => value
+  }
     
   def wrappedValue(value:Any):Any = 
     if(value.isInstanceOf[BasicDBList])

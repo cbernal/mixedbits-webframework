@@ -11,7 +11,7 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
   def this() = this(new BasicDBList)
   
   def length = list.size
-  def elements = new Iterator[T]{
+  def iterator = new Iterator[T]{
     private var currentIndex = 0 
     def next():T = {currentIndex+=1;apply(currentIndex-1)}
     def hasNext():Boolean = currentIndex < list.size
@@ -66,7 +66,10 @@ class JsArray[T](val list:BasicDBList) extends Seq[T]{
 
   def -=(value:T){ while(list contains value){list.remove(value)} }
   
-  def clear = list.clear
+  def clear:JsArray[T] = {
+    list.clear
+    this
+  }
   
   def toJson():String = list.toString
 }
@@ -84,4 +87,8 @@ object JsArray{
   def apply[T](firstValue:T,values:T*) = new JsArray[T].add(firstValue,values:_*)
   
   def apply[T](values:Seq[T]) = new JsArray[T].addAll(values)
+  
+  def apply[T](values:Array[T]) = new JsArray[T].addAll(values)
+  
+  //def fromArgs[T](values:T*) = new JsArray[T] ++= values
 }
