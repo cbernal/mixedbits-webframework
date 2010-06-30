@@ -16,9 +16,8 @@ class WebApplicationLoader extends Filter{
   
   def destroy{app.destroy}
   
-  def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain){
+  def doFilter(request:ServletRequest, response:ServletResponse, chain:FilterChain) = 
     app.doFilter(request,response,chain)
-  }
   
 }
 
