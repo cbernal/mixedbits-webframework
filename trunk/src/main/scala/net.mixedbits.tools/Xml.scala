@@ -72,9 +72,15 @@ object Xml{
   }
   
   def attributes(elem:scala.xml.Elem)(values:(String,String)*):scala.xml.Elem = 
-    if(values.size > 0)
+    if(elem!=null && values.size > 0)
       elem % attributes(values:_*)
     else
       elem
   
+}
+
+trait XmlImports{
+  implicit def toExtendedElem(elem:scala.xml.Elem) = new {
+    def %%(values:(String,String)*) = net.mixedbits.tools.Xml.attributes(elem)(values:_*)
+  }
 }
