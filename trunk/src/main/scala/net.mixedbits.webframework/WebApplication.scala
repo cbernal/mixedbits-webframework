@@ -23,7 +23,7 @@ class WebApplicationLoader extends Filter{
 
 trait WebApplication extends Filter{
   
-  val notFoundPage:WebResponse
+  def notFoundPage:WebResponse
   //def paths:PartialFunction[String,WebResponse]
   
   type PathMatcher = PartialFunction[String,WebResponse]
