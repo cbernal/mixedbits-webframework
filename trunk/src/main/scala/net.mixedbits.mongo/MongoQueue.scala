@@ -2,8 +2,6 @@ package net.mixedbits.mongo
 
 import net.mixedbits.json._
 import net.mixedbits.tools._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
 import java.util.Date
 
 import org.scala_tools.time._
@@ -320,6 +318,10 @@ abstract class MongoQueue[T <: JsDocument](collectionReference: => MongoBaseColl
   
   //how many times to attempt applying item updates before giving up
   def maxUpdateAttempts = 5
+  
+  
+  def indexForScheduledItems() = collection.index(queueName+"-scheduled-time",queue.ScheduledTime -> SortDirection.Ascending)
+  def indexForExpiredItems() = collection.index(queueName+"-laststarted-lastfinished",queue.LastStarted -> SortDirection.Ascending,queue.LastFinished -> SortDirection.Ascending)
   
   //def statsSpeedDuration:Duration
   //

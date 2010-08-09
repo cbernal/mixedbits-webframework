@@ -1,8 +1,6 @@
 package net.mixedbits.mongo
 
 import net.mixedbits.tools._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
 import net.mixedbits.json._
 import com.mongodb._
 
@@ -19,6 +17,8 @@ trait MongoBaseCollection[T <: JsDocument] extends Iterable[T]{
   
   def removeById(id:String):Unit
   def remove(doc:T):Unit
+  
+  def index(indexName:String,properties:(JsProperty[_],SortDirection)*):Unit
 }
 
 class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:JsObject) extends MongoBaseCollection[JsDocument]{
@@ -90,58 +90,20 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     }
   }
   
+  /*
   def indexProperties(indicies:IndexLeft*) =
     index(indicies.map(toLeft[IndexLeft,IndexRight](_)):_*)
   
   def indexGroups(indicies:IndexRight*) =
     index(indicies.map(toRight[IndexLeft,IndexRight](_)):_*)
+    */
+  
+  def index(property:JsProperty[_]) = 
+    usingWriteConnection{MongoTools.ensureIndex(_,None,property -> Ascending)}
+  
+  def index(indexName:String,properties:(JsProperty[_],SortDirection)*) = 
+    usingWriteConnection{MongoTools.ensureIndex(_,Option(indexName),properties:_*)}
     
-  
-  def index(indexName:String,properties:(JsProperty[_],SortDirection)*) = {
-    usingWriteConnection{
-      connection=>
-      val indexDescription = new BasicDBObject
-      for( (property,direction) <- properties)
-        indexDescription.put(property.propertyName,direction.value)
-      //println("Ensuring index("+indexName+"): "+indexDescription)
-      //printDuration{
-      connection.ensureIndex(indexDescription,indexName)
-    }
-  }
-  
-  def index(indicies:IndexParam*){
-    usingWriteConnection{
-      connection=>
-      
-      try{
-        for(index <- indicies){
-          index match {
-            
-            case Left(property) =>
-              val indexDescription = JsObject(property.propertyName->1).obj
-              //println("Ensuring index: "+indexDescription)
-              //printDuration{
-              connection.ensureIndex(indexDescription)
-              //}
-            
-            case Right( (indexName, properties) ) =>
-              val indexDescription = new BasicDBObject
-              for(property <- properties)
-                indexDescription.put(property.propertyName,1)
-              //println("Ensuring index("+indexName+"): "+indexDescription)
-              //printDuration{
-              connection.ensureIndex(indexDescription,indexName)
-              //}
-              
-          }
-        }
-      }
-      catch{
-        case e => e.printStackTrace()
-      }
-    }
-  }
-  
   def count() = usingReadConnection{_.getCount}
   
   def getAllIds():MongoCollectionResultSet =
