@@ -2,8 +2,6 @@ package net.mixedbits.webframework
 
 import scala.xml._
 
-import Tools._
-
 abstract class IncludeFile{
   def elements:Elements
 }

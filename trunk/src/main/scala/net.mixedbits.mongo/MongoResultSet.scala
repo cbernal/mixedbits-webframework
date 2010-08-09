@@ -2,9 +2,6 @@ package net.mixedbits.mongo
 
 import net.mixedbits.json._
 import net.mixedbits.tools._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.Sequences._
-import net.mixedbits.tools.BlockStatements._
 import com.mongodb._
 
 sealed abstract class SortDirection(val value:Int)

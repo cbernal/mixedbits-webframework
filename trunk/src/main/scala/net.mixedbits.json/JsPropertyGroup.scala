@@ -1,8 +1,6 @@
 package net.mixedbits.json
 
 import net.mixedbits.tools._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
 
 import com.mongodb._
 

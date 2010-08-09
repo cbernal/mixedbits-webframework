@@ -1,7 +1,6 @@
 package net.mixedbits.webframework
 
 import scala.xml._
-import net.mixedbits.webframework.Tools._
 import net.mixedbits.tools._
 
 import net.tanesha.recaptcha._

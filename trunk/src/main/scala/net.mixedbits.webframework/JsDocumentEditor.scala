@@ -1,7 +1,6 @@
 package net.mixedbits.webframework
 
 import net.mixedbits.webframework._
-import net.mixedbits.webframework.Tools._
 import net.mixedbits.json._
 
 /*

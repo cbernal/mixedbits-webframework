@@ -3,7 +3,6 @@ package net.mixedbits.webframework.sample
 import scala.xml._
 
 import net.mixedbits.webframework._
-import net.mixedbits.webframework.Tools._
 
 object SampleApplication extends WebApplication{
   
