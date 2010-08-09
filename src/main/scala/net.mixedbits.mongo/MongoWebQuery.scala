@@ -1,6 +1,6 @@
 package net.mixedbits.mongo
 
-import net.mixedbits.tools.BlockStatements._
+import net.mixedbits.tools._
 import net.mixedbits.json._
 
 trait MongoWebQuery{

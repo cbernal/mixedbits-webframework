@@ -4,8 +4,6 @@ import javax.servlet.http._
 
 import scala.xml._
 
-import Tools._
-
 trait TextResponse extends WebResponse{
   
   //tuple containing contentType and responseBody

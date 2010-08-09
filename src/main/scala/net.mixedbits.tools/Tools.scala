@@ -229,6 +229,8 @@ trait ObjectsImports{
       Some(value)
   
   implicit def toForwardPipe[T](value:T) = new ForwardPipe[T](value)
+  
+  implicit def symbolPairToStringPair[T](value:(Symbol,T)):(String,T) = (value._1.name,value._2)
 }
 
 class ForwardPipe[T](value:T){
