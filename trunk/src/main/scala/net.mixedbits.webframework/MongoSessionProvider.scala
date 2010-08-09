@@ -1,8 +1,6 @@
 package net.mixedbits.webframework
 
 import net.mixedbits.tools._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
 import net.mixedbits.json._
 import net.mixedbits.mongo._
 import org.scala_tools.time.Imports._
@@ -49,8 +47,9 @@ trait MongoSessionProvider extends CustomSessionProvider[JsDocument]{
           if timeUntilExpiration < sessionReValidatePeriod
           ) sessionCollection.update(doc){SessionExpiration <~ newExpirationDate}
       
-          //restore existing original document id so that the document appears mostly unchanged
+        //restore existing original document id so that the document appears mostly unchanged
         Some(doc(JsDocument.Id <~ JsTools.marshalId(doc(OriginalDocumentId,""))))
+        
       case None =>
         None
     }
