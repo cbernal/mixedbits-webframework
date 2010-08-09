@@ -2,8 +2,7 @@ package net.mixedbits.mongo
 
 import net.mixedbits.tools._
 import net.mixedbits.json._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
+import net.mixedbits.tools._
 import com.mongodb._
 import com.mongodb.gridfs._
 import java.io._
@@ -51,6 +50,9 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   lazy val rawFileSystem = new GridFS(database.getDatabase,collectionName)
   lazy val metadata = new MongoCollection(database,collectionName+".files")
   lazy val chunks = new MongoCollection(database,collectionName+".chunks")
+  
+  def index(indexName:String,properties:(JsProperty[_],SortDirection)*) = 
+    metadata.usingWriteConnection{MongoTools.ensureIndex(_,Option(indexName),properties:_*)}
   
   def store(source:java.io.File, path:String, updates:JsUpdate) = storeFile(rawFileSystem.createFile(source),path,Some(updates))
   def store(source:java.io.File, path:String) = storeFile(rawFileSystem.createFile(source),path,None)

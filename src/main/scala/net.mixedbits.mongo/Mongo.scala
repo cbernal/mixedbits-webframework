@@ -2,8 +2,7 @@ package net.mixedbits.mongo
 
 import net.mixedbits.tools._
 import net.mixedbits.json._
-import net.mixedbits.tools.Objects._
-import net.mixedbits.tools.BlockStatements._
+import net.mixedbits.tools._
 import com.mongodb._
 
 import scala.collection.mutable.ListBuffer
@@ -86,6 +85,19 @@ object MongoTools{
       None
     else
       Some(new JsDocument(value))
+    
+    
+  def ensureIndex(collection:DBCollection,indexName:Option[String],properties:(JsProperty[_],SortDirection)*) = {
+    val indexDescription = new BasicDBObject
+    for( (property,direction) <- properties)
+      indexDescription.put(property.propertyName,direction.value)
+
+    if(indexName.isDefined)
+      for(value <- indexName)
+        collection.ensureIndex(indexDescription,value)
+    else
+      collection.ensureIndex(indexDescription)
+  }
   
 }
 
