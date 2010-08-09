@@ -1,8 +1,8 @@
-package net.mixedbits.webframework
+package net.mixedbits
 
 import scala.xml._
 
-object Tools{
+package object webframework{
   type Elements = NodeBuffer
   implicit def elemToNodeBuffer(element:Elem) = 
     new NodeBuffer() &+ element
