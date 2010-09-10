@@ -1,6 +1,6 @@
 import sbt._
 
-class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultWebProject(info){
+class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultProject(info){
   currentProject =>
 
 
@@ -31,15 +31,6 @@ class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultWebProject(
   
   
   /******************
-  | jetty config    |
-  ******************/
-  
-  //override def jettyPort = 9000
-  override def jettyWebappPath  = webappPath
-  override def scanDirectories = super.jettyWebappPath / "WEB-INF" :: Nil //mainCompilePath :: testCompilePath :: Nil
-  
-  
-  /******************
   | misc            |
   ******************/
   
@@ -60,9 +51,6 @@ class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultWebProject(
   /******************
   | building        |
   ******************/
-  
-  lazy val refresh = task{jettyRun.run;None} dependsOn(clean)
-  lazy val refreshCode = task{jettyRun.run;None} dependsOn(jettyStop)
   
   override def compileOptions = super.compileOptions ++ (Seq("-unchecked","-g:vars") map {CompileOption(_)})
 
