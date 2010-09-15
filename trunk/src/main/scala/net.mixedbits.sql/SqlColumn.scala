@@ -13,10 +13,14 @@ case object SqlInt16 extends SqlIntSize
 case object SqlInt32 extends SqlIntSize
 case object SqlInt64 extends SqlIntSize
 
+sealed trait SqlFloatSize
+case object SqlFloat32 extends SqlFloatSize
+case object SqlFloat64 extends SqlFloatSize
+
 sealed trait SqlColumnType
 case class SqlStringColumn(size:SqlStringSize) extends SqlColumnType
 case class SqlIntColumn(size:SqlIntSize) extends SqlColumnType
-case object SqlFloatColumn extends SqlColumnType
+case class SqlFloatColumn(size:SqlFloatSize) extends SqlColumnType
 case object SqlDateTimeColumn extends SqlColumnType
 case object SqlBoolColumn extends SqlColumnType
 case object SqlAutoIncrementColumn extends SqlColumnType

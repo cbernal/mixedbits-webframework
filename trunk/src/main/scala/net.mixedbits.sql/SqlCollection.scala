@@ -272,8 +272,8 @@ class SqlCollection[T <: Product : ClassManifest,P:PrimaryKey](val tableName:Str
       case SqlPrimitive.Short => SqlIntColumn(SqlInt16)
       case SqlPrimitive.Int => SqlIntColumn(SqlInt32)
       case SqlPrimitive.Long => SqlIntColumn(SqlInt64)
-      case SqlPrimitive.Float => SqlFloatColumn
-      case SqlPrimitive.Double => SqlFloatColumn
+      case SqlPrimitive.Float => SqlFloatColumn(SqlFloat32)
+      case SqlPrimitive.Double => SqlFloatColumn(SqlFloat64)
       case SqlPrimitive.String => SqlStringColumn(SqlVarChar(255))
       case SqlPrimitive.Date => SqlDateTimeColumn
       case SqlPrimitive.SqlAutoIncrement => SqlAutoIncrementColumn
