@@ -54,7 +54,10 @@ trait SqlDatabase{
             case SqlInt32 => ("INT","")
             case SqlInt64 => ("LONG","")
           }
-          case SqlFloatColumn => ("FLOAT","")
+          case SqlFloatColumn(size) => size match {
+            case SqlFloat32 => ("FLOAT","")
+            case SqlFloat64 => ("DOUBLE","")
+          }
           case SqlDateTimeColumn => ("DATETIME","")
           case SqlBoolColumn => ("BOOL","")
           case SqlAutoIncrementColumn => ("BIGINT","auto_increment")

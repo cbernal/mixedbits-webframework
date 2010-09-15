@@ -50,7 +50,7 @@ class XmlStore(val schema:DocumentSchema, val sqlDatabase:SqlDatabase){
   
   private def constrain(value:Int,min:Int,max:Int) = 
     if(value > max || value < min) {
-      println("char size must be between "+min+" and "+max+", '"+value+"' is not valid. defaulting to "+max)
+      println("XmlStore: char size must be between "+min+" and "+max+", '"+value+"' is not valid. defaulting to "+max)
       max
     } else {
       value
@@ -75,7 +75,7 @@ class XmlStore(val schema:DocumentSchema, val sqlDatabase:SqlDatabase){
             case "" =>
               SqlSmallText
             case other =>
-              println("found unsupported string size: "+other+", defaulting to small")
+              println("XmlStore: found unsupported string size: "+other+", defaulting to small")
               SqlSmallText
           })
         case "int" => 
@@ -89,10 +89,19 @@ class XmlStore(val schema:DocumentSchema, val sqlDatabase:SqlDatabase){
             case "64bit" =>
               SqlInt64
             case other =>
-              println("found unsupported int size: "+other+", defaulting to 32bit")
+              println("XmlStore: found unsupported int size: "+other+", defaulting to 32bit")
               SqlInt32
           })
-        case "float" => SqlFloatColumn
+        case "float" =>
+          SqlFloatColumn(column.size match {
+            case "32bit" =>
+              SqlFloat32
+            case "64bit" =>
+              SqlFloat64
+            case other =>
+              println("XmlStore: found unsupported float size: "+other+", defaulting to 64bit")
+              SqlFloat64
+          })
         case "datetime" => SqlDateTimeColumn
         case "bool" => SqlBoolColumn
       }

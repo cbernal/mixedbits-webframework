@@ -12,7 +12,7 @@ class View(store:XmlStore,val definition:DocumentView,val table:SqlTable) extend
   lazy val extractors = {
     val factory = XPathFactory.newInstance()
     for(column <- definition.columns)
-      yield (column.name,factory.newXPath().compile(column.select))
+      yield (column.name,column.columnType,factory.newXPath().compile(column.select))
   }
   
   lazy val entrySelector = 
@@ -26,8 +26,12 @@ class View(store:XmlStore,val definition:DocumentView,val table:SqlTable) extend
       table.insert{ row =>
         row('_collection) = collection
         row('_id) = id
-        for( (name,xpath) <- extractors )
-          row(Symbol(name)) = xpath.evaluate(node)
+        for( (name,columnType,xpath) <- extractors ){
+          val value = xpath.evaluate(node)
+          //don't allow empty strings to be stored in non string columns
+          if(value != "" || columnType == "string")
+            row(Symbol(name)) = value
+        }
       }
     }
   }
@@ -51,14 +55,13 @@ class ViewQuery(store:XmlStore,table:SqlTable,criteria:Option[SqlCriteria],selec
     val tableResults = criteria map {table.findAll.where(_)} getOrElse table.findAll
     
     select match {
-      case Some(value) =>
-        tableResults.map{
-          row => 
+      case Some(columns) =>
+        tableResults.map{ row => 
           Document(
             store,
             row[String]('_collection),
             row[String]('_id),
-            value.map{v=>(v,row[String](v))}:_*
+            columns.map{columnName=>(columnName,row[String](columnName))}:_*
           )
         }.toList.iterator
       case None =>
