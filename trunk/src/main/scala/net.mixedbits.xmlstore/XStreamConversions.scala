@@ -1,6 +1,5 @@
 package net.mixedbits.xmlstore
 
-
 import com.thoughtworks.xstream.converters._  
 import com.thoughtworks.xstream.converters.collections._  
 import com.thoughtworks.xstream._  
@@ -32,10 +31,11 @@ class ListConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_map
   }
 }
 
-class SeqConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapper) {
+import scala.collection.mutable.ListBuffer
+class SeqConverter[T <: Seq[Any]](fromSeq: Seq[Any] => T)(implicit manifest:ClassManifest[T],_mapper:Mapper) extends AbstractCollectionConverter(_mapper) {
+  val seqClass = manifest.erasure
   def canConvert( clazz: Class[_]) = {
-    // "::" is the name of the list class, also handle nil
-    classOf[Seq[_]] == clazz
+    seqClass == clazz
   }  
     
   def marshal( value: Any, writer: HierarchicalStreamWriter, context: MarshallingContext) = {
@@ -46,14 +46,14 @@ class SeqConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapp
   }
     
   def unmarshal( reader: HierarchicalStreamReader, context: UnmarshallingContext ) = {
-    val list = new scala.collection.mutable.ListBuffer[Any]()
+    val list = new ListBuffer[Any]()
     while (reader.hasMoreChildren()) {
       reader.moveDown()
       val item = readItem(reader, context, list)
       list += item
       reader.moveUp()  
-    }  
-    list.toList
+    }
+    fromSeq(list)
   }
 }
 
@@ -99,8 +99,10 @@ class SymbolConverter extends SingleValueConverter {
     classOf[Symbol] == clazz
 }
   
-object ScalaConversions {  
+object ScalaConversions {
   def apply( stream: XStream ):XStream = {
+    implicit val mapper = stream.getMapper
+    
     //list
     stream.alias("list", classOf[::[_]])
     stream.alias("list", Nil.getClass)
@@ -113,12 +115,27 @@ object ScalaConversions {
     //symbols
     stream.alias("symbol", classOf[Symbol])
     stream.registerConverter( new SymbolConverter() )
-  
-    //symbols
-    stream.alias("seq", classOf[Seq[_]])
-    stream.registerConverter( new SeqConverter(stream.getMapper) )
+
+    //various seq implementations    
+    stream.alias("arrayBuffer",classOf[scala.collection.mutable.ArrayBuffer[_]])
+    stream.registerConverter(new SeqConverter[scala.collection.mutable.ArrayBuffer[Any]](x => new scala.collection.mutable.ArrayBuffer[Any] ++= x))
+    
+    stream.alias("listBuffer",classOf[scala.collection.mutable.ListBuffer[_]])
+    stream.registerConverter(new SeqConverter[scala.collection.mutable.ListBuffer[Any]](x => new scala.collection.mutable.ListBuffer[Any] ++= x))
     
     stream
   }
+  
+  def test(){
+    implicit val stream = ScalaConversions(new XStream)
+    testType(new scala.collection.mutable.ArrayBuffer[Int] ++= List(1,2,3))
+    testType(new scala.collection.mutable.ListBuffer[Int] ++= List(1,2,3))
+  }
+  
+  def testType[T](x:T)(implicit stream:XStream,manifest:ClassManifest[T]){
+    val xml = stream.toXML(x) 
+    println("Test for type: "+manifest.erasure)
+    println(xml)
+    println(stream.fromXML(xml))
+  }
 }
-
