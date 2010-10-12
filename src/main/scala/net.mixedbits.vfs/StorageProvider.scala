@@ -3,17 +3,17 @@ package net.mixedbits.vfs
 import java.io._
 
 trait StorageProvider{
-  def path(rawPath:String,vfs:VirtualFileSystem):Path
+  def path(rawPath:String,relativePath:String,vfs:VirtualFileSystem):Path
 }
 
 class LocalStorageProvider(root:File) extends StorageProvider{
   self =>
   
-  def path(rawPath:String,vfs:VirtualFileSystem) = {
+  def path(rawPath:String,relativePath:String,vfs:VirtualFileSystem) = {
     val storageProvider = self
     val _rawPath = rawPath
     val _vfs = vfs
-    val asFile = new File(root,rawPath)
+    val asFile = new File(root,relativePath)
     new Path{
       val storageProvider = self
       val rawPath = _rawPath
