@@ -19,7 +19,7 @@ object ffmpeg extends ((String,InputStream,String,OutputStream,Double=>Unit)=>Un
                       if(line contains "Duration")
                         duration =  Time.parseDuration(line.dropWhile(_!=':').drop(1).takeWhile(_!=',').trim)
                       else if(line contains "time=")
-                        progress(min(duration,((line split "\\s+" filter {_ startsWith "time="} head).drop(5)).parseDouble(0)) / duration)
+                        progress(min(duration,((line split "\\s+" filter {_ startsWith "time="} head) drop 5).parseDouble(0)) / duration)
                     })
     
     threads foreach {_.start}
