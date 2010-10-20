@@ -30,5 +30,5 @@ trait MemorySessionProvider[T >: Null <: AnyRef] extends WebSessionProvider[T]{
       None
   
   def currentSessionValue():Option[T] = 
-    Objects.toOption(WebRequest.httpRequest.getSession.getAttribute(sessionValueKey).asInstanceOf[T])
+    Option(WebRequest.httpRequest.getSession.getAttribute(sessionValueKey).asInstanceOf[T])
 }

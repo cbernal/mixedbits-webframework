@@ -65,10 +65,10 @@ trait BufferedMultipartRequest extends WebRequest{
   ******************/
   
   def multipartFile(name:String):Option[MultipartFile] = 
-    Objects.toOption(multipartParams.value).map{case (_,files) => files}.flatMap(_.get(name))
+    Option(multipartParams.value).map{case (_,files) => files}.flatMap(_.get(name))
   
   def multipartParam(name:String):Option[String] = 
-    Objects.toOption(multipartParams.value).map{case (fields,_) => fields}.flatMap(_.get(name)).filter(_ != "")
+    Option(multipartParams.value).map{case (fields,_) => fields}.flatMap(_.get(name)).filter(_ != "")
   
   def multipartParam(name:String,default:String):String = 
     multipartParam(name) getOrElse default
@@ -118,7 +118,7 @@ trait BufferedMultipartRequest extends WebRequest{
   
   onAfter{
     //try to clean up after ourselves
-    for( (_,formFiles) <- Objects.toOption(multipartParams.value))
+    for( (_,formFiles) <- Option(multipartParams.value))
       for(value <- formFiles.values; if value.file.exists)
         if(!value.file.delete())
           value.file.deleteOnExit()
