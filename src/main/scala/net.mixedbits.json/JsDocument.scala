@@ -13,10 +13,10 @@ class JsDocument(baseObject:DBObject) extends JsObject(baseObject){
     this.id = id
   }
   
-  def id:String = toOption(obj.get("_id")).map(_.toString).getOrElse("")
+  def id:String = Option(obj.get("_id")).map(_.toString).getOrElse("")
   def id_=(value:String) = obj.put("_id",JsTools.marshalId(value))
   
-  def collection:String = toOption(obj.get("_ns")).map(_.toString).getOrElse("")
+  def collection:String = Option(obj.get("_ns")).map(_.toString).getOrElse("")
 
 }
 
