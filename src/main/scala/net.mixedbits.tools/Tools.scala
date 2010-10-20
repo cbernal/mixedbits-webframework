@@ -221,12 +221,6 @@ trait ObjectsImports{
   type |[A,B] = Either[A,B]
   implicit def toLeft[A,B](a:A):Either[A,B] = Left(a)
   implicit def toRight[A,B](b:B):Either[A,B] = Right(b)
-    
-  implicit def toOption[T](value:T):Option[T] = 
-    if(value == null)
-      None                            
-    else
-      Some(value)
   
   implicit def toForwardPipe[T](value:T) = new ForwardPipe[T](value)
   
@@ -243,7 +237,7 @@ object BlockStatements extends BlockStatementsImports
 trait BlockStatementsImports{
   /* exceptions */
 	def attempt[T](f: =>T):Option[T] = 
-	  try{ Objects.toOption(f) }
+	  try{ Option(f) }
 	  catch{ case _ => None }
 	
 	def default[T](defaultValue: => T)(f: =>T):T =
