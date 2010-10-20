@@ -35,13 +35,7 @@ class XmlStream{
   private def ignoreParserStop(block: =>Any){
     try{ block }
     catch{
-      case e => 
-        toOption(e.getCause) match {
-          case Some(cause) if cause == XmlStreamParserStopException =>
-            ()
-          case _ =>
-            throw e
-        }
+      case e => Option(e.getCause) filter {_ != XmlStreamParserStopException} foreach {cause => throw e}
     }
   }  
   
