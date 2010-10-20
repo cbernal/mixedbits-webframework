@@ -116,23 +116,24 @@ class MongoCollectionResultSet(collection:MongoCollection,constraint:Option[JsCo
     val result = new BasicDBObject
     for( (property,direction) <- sortBy)
       result.put(property.propertyName,direction.value)
-    result
+    
+    Some(result)
   }
   
   def select(newResultTemplate:JsProperty[_]):MongoCollectionResultSet =
     select(new JsPropertyGroup(newResultTemplate))  
   def select(newResultTemplate:JsPropertyGroup):MongoCollectionResultSet =
-    select(toOption(newResultTemplate)) 
+    select(Option(newResultTemplate)) 
   def select(newResultTemplate:Option[JsPropertyGroup]):MongoCollectionResultSet = 
     new MongoCollectionResultSet(collection,constraint,newResultTemplate,numToSkip,maxResults,indexHint,sortBy)
   
   def skip(newSkipCount:Int):MongoCollectionResultSet =
-    skip(toOption(newSkipCount))
+    skip(Option(newSkipCount))
   def skip(newSkipCount:Option[Int]):MongoCollectionResultSet =
     new MongoCollectionResultSet(collection,constraint,resultTemplate,newSkipCount,maxResults,indexHint,sortBy)
   
   def limit(newResultsCount:Int):MongoCollectionResultSet =
-    limit(toOption(newResultsCount))
+    limit(Option(newResultsCount))
   def limit(newResultsCount:Option[Int]):MongoCollectionResultSet =
     new MongoCollectionResultSet(collection,constraint,resultTemplate,numToSkip,newResultsCount,indexHint,sortBy)
   
