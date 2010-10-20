@@ -26,7 +26,8 @@ class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultProject(inf
     "common-filters" % "common-filters" % "1.0.0M1" from "http://commons-filters.googlecode.com/files/commons-filters-1.0.0M1-dev.jar",//gzip support
     "com.thoughtworks.xstream" % "xstream" % "1.3.1",
     "com.h2database" % "h2" % "1.2.140",
-    "mongodb" % "mongodb" % "2.0" from "http://github.com/downloads/mongodb/mongo-java-driver/mongo-2.0.jar"
+    "org.codehaus.jettison" % "jettison" % "1.2",
+    "mongodb" % "mongodb" % "2.1" from "http://github.com/downloads/mongodb/mongo-java-driver/mongo-2.1.jar"
   )
   
   
