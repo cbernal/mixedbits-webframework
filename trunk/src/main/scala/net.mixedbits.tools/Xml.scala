@@ -14,22 +14,24 @@ import org.xml.sax.{SAXException,InputSource}
 
 object Xml{
 
-  private lazy val xmlDocumentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()	
-
-  def Parse(documentFile:File) = xmlDocumentBuilder.parse(documentFile).getDocumentElement
-  def Parse(inputStream:InputStream) = xmlDocumentBuilder.parse(inputStream).getDocumentElement
-  def Parse(text:String) = xmlDocumentBuilder.parse(new InputSource(new StringReader(text))).getDocumentElement
+  private lazy val documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()	
   
-  def ToString(node:Node) = {
+  def createDocument() = documentBuilder.newDocument()
+
+  def parse(documentFile:File) = documentBuilder.parse(documentFile).getDocumentElement
+  def parse(inputStream:InputStream) = documentBuilder.parse(inputStream).getDocumentElement
+  def parse(text:String) = documentBuilder.parse(new InputSource(new StringReader(text))).getDocumentElement
+  
+  def toString(node:Node) = {
     val writer = new StringWriter()
-    WriteNode(node,writer)
+    writeNode(node,writer)
     writer.toString
   }
-  def WriteNode(node:Node, writer:Writer) = TransformerFactory.newInstance().newTransformer().transform(new DOMSource(node), new StreamResult(writer))
+  def writeNode(node:Node, writer:Writer) = TransformerFactory.newInstance().newTransformer().transform(new DOMSource(node), new StreamResult(writer))
 
-  def ToFormattedString(node:Node):String = ToFormattedString(node,2)
+  def toFormattedString(node:Node):String = toFormattedString(node,2)
 
-	def ToFormattedString(node:Node, indent:Int) = {
+	def toFormattedString(node:Node, indent:Int) = {
     val xmlInput = new DOMSource(node)
     val stringWriter = new StringWriter()
     val xmlOutput = new StreamResult(stringWriter)
@@ -40,22 +42,22 @@ object Xml{
     xmlOutput.getWriter().toString()
 	}
   
-  def Node(relativeTo:Node, xpathQuery:String) = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo,XPathConstants.NODE).asInstanceOf[Node]
-  def Element(relativeTo:Node, xpathQuery:String) = Node(relativeTo,xpathQuery).asInstanceOf[Element]
+  def node(relativeTo:Node, xpathQuery:String) = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo,XPathConstants.NODE).asInstanceOf[Node]
+  def element(relativeTo:Node, xpathQuery:String) = node(relativeTo,xpathQuery).asInstanceOf[Element]
   
-	def Nodes(relativeTo:Node, xpathQuery:String):Seq[Node] = {
+	def nodes(relativeTo:Node, xpathQuery:String):Seq[Node] = {
     val nodes = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo,XPathConstants.NODESET).asInstanceOf[NodeList]
     for(i <- 0 until nodes.getLength)
       yield nodes.item(i)
   }
   
-	def Elements(relativeTo:Node, xpathQuery:String):Seq[Element] = {
+	def elements(relativeTo:Node, xpathQuery:String):Seq[Element] = {
     val nodes = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo,XPathConstants.NODESET).asInstanceOf[NodeList]
     for(i <- 0 until nodes.getLength)
       yield nodes.item(i).asInstanceOf[Element]
   }
   
-	def Text(relativeTo:Node, xpathQuery:String):String = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo)
+	def text(relativeTo:Node, xpathQuery:String):String = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo)
  
   
   def elem(name:String) = scala.xml.Elem(null,name,null,scala.xml.TopScope,Nil:_*)
