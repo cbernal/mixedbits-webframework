@@ -91,14 +91,14 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
   def count() = metadata.count
   
   def findOne(constraint:JsConstraint):Option[MongoFile] = 
-    Objects.toOption(rawFileSystem.findOne(constraint.buildSearchObject))
+    Option(rawFileSystem.findOne(constraint.buildSearchObject))
       .map(new MongoFile(_,database))
   
   def findAll():MongoFileSystemResultSet = 
     new MongoFileSystemResultSet(this,None)
   
   def find(constraint:JsConstraint):MongoFileSystemResultSet = 
-    new MongoFileSystemResultSet(this,constraint)
+    new MongoFileSystemResultSet(this,Some(constraint))
 
   def listFiles(folder:String):MongoFileSystemResultSet =
     find(Folder == folder)
@@ -112,7 +112,7 @@ class MongoFileSystem(databaseReference: => MongoDatabase, name:String) extends 
     getFile(path).isDefined
 
   def getFile(path:String):Option[MongoFile] = 
-    Objects.toOption(rawFileSystem.findOne(MongoFileSystem.normalizePath(path)))
+    Option(rawFileSystem.findOne(MongoFileSystem.normalizePath(path)))
       .map(new MongoFile(_,database))
       
   def readFile(path:String):Option[java.io.InputStream] =

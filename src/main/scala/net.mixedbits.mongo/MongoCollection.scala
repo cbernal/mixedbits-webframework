@@ -116,7 +116,7 @@ class MongoCollection(databaseReference: =>MongoDatabase, name:String, settings:
     new MongoCollectionUpdateableResultSet(this,None)
 
   def find(constraint:JsConstraint):MongoCollectionUpdateableResultSet =
-    new MongoCollectionUpdateableResultSet(this,constraint)
+    new MongoCollectionUpdateableResultSet(this,Some(constraint))
   
   def findOne:Option[JsDocument] =
     attempt{new JsDocument(usingReadConnection(_.findOne).asInstanceOf[BasicDBObject])}
