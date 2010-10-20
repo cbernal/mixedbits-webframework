@@ -21,7 +21,7 @@ sealed trait JsProperty[T]{
     if(currentObject == null || !currentObject.containsField(shortName))
       None
     else
-      toOption(currentObject.get(shortName).asInstanceOf[X])
+      Option(currentObject.get(shortName).asInstanceOf[X])
   }
   
   def isDefinedOnObject(obj:DBObject):Boolean = {
@@ -33,7 +33,7 @@ sealed trait JsProperty[T]{
   }
   
   def removeValue(obj:DBObject){
-    toOption(resolveObject(obj,false)).map(_.removeField(shortName))
+    Option(resolveObject(obj,false)).map(_.removeField(shortName))
   }
   
   def updateValue(start:DBObject,value:T):T = 

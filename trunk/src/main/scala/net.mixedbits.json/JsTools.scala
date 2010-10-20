@@ -12,13 +12,14 @@ object JsTools{
     if(value == null || value.length != 24)
       return value
     
-    //this method will convert strings that are longer than an object id if the first 12 hex encoded bytes are valid
-    val objectId = ObjectId.massageToObjectId(value)
-    if(objectId!=null)
-      objectId
-    else
-      value
+    try{
+      new ObjectId(value)
+    } catch {
+      case _ => value
+    }
   }
+  
+  
   
   def resolveObject(start:DBObject,create:Boolean,fieldPath:Array[String]):DBObject = {
     var currentObject = start
