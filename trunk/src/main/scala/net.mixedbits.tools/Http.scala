@@ -209,9 +209,9 @@ class HttpRequest private[tools](requestMethod:String,url:String){
       tidy.setShowErrors(0)
       
       val parsedResponse = tidy.parseDOM(httpResponse.stream,null)
-      for(meta <- Xml.Elements(parsedResponse,"//meta[@http-equiv]")){
-        val key = Xml.Text(meta,"@http-equiv")
-        val value = Xml.Text(meta,"@content")
+      for(meta <- Xml.elements(parsedResponse,"//meta[@http-equiv]")){
+        val key = Xml.text(meta,"@http-equiv")
+        val value = Xml.text(meta,"@content")
         
         //parse value, and process redirect
         if("refresh".equalsIgnoreCase(key)){
