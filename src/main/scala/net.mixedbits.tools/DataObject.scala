@@ -155,6 +155,10 @@ trait DataObject{
   dataObject =>
   def tagName = getClass.getSimpleName
   
+  def convertTo[T:DataFormat] = 
+    implicitly[DataFormat[T]].encode(jsonData)
+  
+  
   protected[tools] def loadJsonData(data:DBObject):dataObject.type = {jsonData = data;this}
   
   protected[tools] var jsonData:DBObject = new BasicDBObject("#",tagName)
