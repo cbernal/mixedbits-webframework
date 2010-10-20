@@ -36,7 +36,7 @@ class ConfigFile(defaultFile:File,alternateFiles:File*) extends ValNameProvider 
   def property(name:String):Option[String] = 
     for{
       properties <- configProperties
-      value <- Objects.toOption(properties.getProperty(name))
+      value <- Option(properties.getProperty(name))
     } yield value
       
   class Value[T](defaultValue:Option[T])(implicit extractor:String => Option[T]) extends Provided[T]{
@@ -84,7 +84,7 @@ class ConfigFile(defaultFile:File,alternateFiles:File*) extends ValNameProvider 
   }
   
   def value[T](implicit extractor:String => Option[T]) = new ValueForVal[T](None)
-  def valueWithDefault[T](default:T)(implicit extractor:String => Option[T]) = new ValueForVal[T](Objects.toOption(default))
+  def valueWithDefault[T](default:T)(implicit extractor:String => Option[T]) = new ValueForVal[T](Option(default))
   
   def optional[T](implicit extractor:String => Option[T]) = new OptionalValueForVal[T]
   
