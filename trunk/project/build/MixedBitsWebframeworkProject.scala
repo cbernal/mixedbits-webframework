@@ -38,6 +38,7 @@ class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultProject(inf
   override def consoleInit =
     """
     import java.io._
+    import net.mixedbits.media._
     import net.mixedbits.json._
     import net.mixedbits.mongo._
     import net.mixedbits.tools._
