@@ -7,7 +7,7 @@ import net.tanesha.recaptcha._
 
 class Recaptcha(val publicKey:String, val privateKey:String,theme:Option[String]){
   def this(publicKey:String,privateKey:String) = this(publicKey,privateKey,None)
-  def this(publicKey:String,privateKey:String,theme:String) = this(publicKey,privateKey,Objects.toOption(theme))
+  def this(publicKey:String,privateKey:String,theme:String) = this(publicKey,privateKey,Option(theme))
   
   val challengeFieldName = "recaptcha_challenge_field"
   val responseFieldName = "recaptcha_response_field"

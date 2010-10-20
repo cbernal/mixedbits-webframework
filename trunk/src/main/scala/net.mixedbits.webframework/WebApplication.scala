@@ -72,7 +72,7 @@ trait WebApplication extends Filter{
     val httpRequest = requestWrapper(request.asInstanceOf[HttpServletRequest])
     val httpResponse = response.asInstanceOf[HttpServletResponse]
     
-    val path = java.net.URLDecoder.decode(httpRequest.getRequestURI,Objects.toOption(httpRequest.getCharacterEncoding) getOrElse "UTF-8")
+    val path = java.net.URLDecoder.decode(httpRequest.getRequestURI,Option(httpRequest.getCharacterEncoding) getOrElse "UTF-8")
     
     WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
       

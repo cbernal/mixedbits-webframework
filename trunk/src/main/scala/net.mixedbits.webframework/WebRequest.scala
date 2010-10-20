@@ -10,7 +10,7 @@ object WebRequest{
   val webPath = new DynamicVariable[WebPathMatch](null)
   
   def param(name:String) = 
-    Objects.toOption(httpRequest.getParameter(name)).filter(_!="")
+    Option(httpRequest.getParameter(name)).filter(_!="")
   
   def param(name:String,default:String):String = param(name).getOrElse(default)
   
@@ -22,7 +22,7 @@ object WebRequest{
       values
   }
 
-  def cookies = Objects.toOption( httpRequest.getCookies ) getOrElse Array[Cookie]()
+  def cookies = Option( httpRequest.getCookies ) getOrElse Array[Cookie]()
   def cookie(name:String):Option[Cookie] = {
     for(cookie <- WebRequest.cookies if(cookie.getName.equals(name) && cookie.getValue!=""))
       return Some(cookie)
@@ -35,7 +35,7 @@ object WebRequest{
   def httpResponse = requestContext.value._4
   def webpath = webPath.value
   def queryString = httpRequest.getQueryString
-  def currentPath = Objects.toOption(queryString) match { 
+  def currentPath = Option(queryString) match { 
     case Some(query) => webpath.url+"?"+query
     case None => webpath.url
   }
