@@ -1,5 +1,6 @@
 package net.mixedbits.xmlstore
 
+import net.mixedbits.tools._
 import net.mixedbits.xmlstore.schema._
 import net.mixedbits.sql._
 
@@ -16,9 +17,46 @@ import org.xml.sax.InputSource
 
 import com.thoughtworks.xstream.XStream
 
+trait XmlConverter[T <: AnyRef]{
+  def fromString(s:String):T
+  def toDocument(value:T):org.w3c.dom.Document
+}
+object XmlConverter{
+  implicit def dataObjectConverter[T <: DataObject](implicit manifest:ClassManifest[T]) = new XmlConverter[T]{
+    def fromString(value:String) = DataObject.load[T,org.w3c.dom.Element](Xml.parse(value))
+    def toDocument(value:T) = value.convertTo[org.w3c.dom.Element].getOwnerDocument
+  }
+  implicit def xstreamConverter[T <: AnyRef](implicit manifest:ClassManifest[T]) = new XmlConverter[T]{
+    private lazy val xstream = {
+      val x = ScalaConversions(new XStream())
+      x.setMode(XStream.NO_REFERENCES)
+      
+      def findInterestingType(clazz:Class[_]):List[Class[_]] = {
+        clazz.getDeclaredMethods.toList.filter(
+                            method =>
+                            method.getParameterTypes.size==0 &&
+                            !((classOf[Product].getDeclaredMethods.map(_.getName).toList ::: "hashCode" :: "toString" :: Nil) contains method.getName) &&
+                            !method.getName.contains("copy$default$") &&
+                            !method.getReturnType.isPrimitive &&
+                            !Array("java.lang","java.util").contains(Option(method.getReturnType.getPackage).map(_.getName).getOrElse("")) &&
+                            method.getReturnType!=classOf[Function1[_,_]]
+                            ) map {_.getReturnType} map {clazz => var c=clazz; while(c isArray){c = c.getComponentType};c}
+      }
+      
+      x.alias(manifest.erasure.getSimpleName,manifest.erasure)
+      
+      for(clazz <- findInterestingType(manifest.erasure))
+        x.alias(clazz.getSimpleName,clazz)
+      
+      x
+    }
+    
+    def fromString(value:String) = xstream.fromXML(value).asInstanceOf[T]
+    def toDocument(value:T) = Xml.parse(xstream.toXML(value)).getOwnerDocument
+  }
+}
 
-
-class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlStore, manifest:ClassManifest[T]){
+class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlStore, xmlConverter:XmlConverter[T]){
   
   store.register(this.asInstanceOf[Collection[AnyRef]])
   
@@ -33,38 +71,11 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
       }
     }
     implicit object DomOutputFormat extends CollectionOutputFormat[org.w3c.dom.Document]{
-      def retreive(id:String):org.w3c.dom.Document = 
-        xmlDocumentBuilder.parse(new InputSource(new StringReader(StringOutputFormat.retreive(id))))
+      def retreive(id:String):org.w3c.dom.Document = Xml.parse(StringOutputFormat.retreive(id)).getOwnerDocument
     }
     implicit object specificOutputFormat extends CollectionOutputFormat[T]{
-      def retreive(id:String):T = xstream.fromXML(StringOutputFormat.retreive(id)).asInstanceOf[T]
+      def retreive(id:String):T = xmlConverter.fromString(StringOutputFormat.retreive(id))
     }
-  }
-  
-  private lazy val xmlDocumentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-  private lazy val transformerFactory = TransformerFactory.newInstance()
-  private lazy val xstream = {
-    val x = ScalaConversions(new XStream())
-    x.setMode(XStream.NO_REFERENCES)
-    
-    def findInterestingType(clazz:Class[_]):List[Class[_]] = {
-      clazz.getDeclaredMethods.toList.filter(
-                          method =>
-                          method.getParameterTypes.size==0 &&
-                          !((classOf[Product].getDeclaredMethods.map(_.getName).toList ::: "hashCode" :: "toString" :: Nil) contains method.getName) &&
-                          !method.getName.contains("copy$default$") &&
-                          !method.getReturnType.isPrimitive &&
-                          !Array("java.lang","java.util").contains(Option(method.getReturnType.getPackage).map(_.getName).getOrElse("")) &&
-                          method.getReturnType!=classOf[Function1[_,_]]
-                          ) map {_.getReturnType} map {clazz => var c=clazz; while(c isArray){c = c.getComponentType};c}
-    }
-    
-    x.alias(manifest.erasure.getSimpleName,manifest.erasure)
-    
-    for(clazz <- findInterestingType(manifest.erasure))
-      x.alias(clazz.getSimpleName,clazz)
-    
-    x
   }
 
   def className = getClass.getSimpleName split '$' filter {_!=""} last
@@ -74,15 +85,15 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
   lazy val idExtractor = XPathFactory.newInstance().newXPath().compile(definition.documentId)
   
   def store(obj:T):String = {
-    store(xstream.toXML(obj))
+    store(xmlConverter.toDocument(obj))
   }
   
   def store(stream:InputStream):String = {
-    store(xmlDocumentBuilder.parse(stream))
+    store(Xml.parse(stream).getOwnerDocument)
   }
   
   def store(doc:String):String = {
-    store(xmlDocumentBuilder.parse(new InputSource(new StringReader(doc))))
+    store(Xml.parse(doc).getOwnerDocument)
   }
   
   def store(doc:org.w3c.dom.Document):String = store.sqlDatabase{ implicit connection =>
@@ -93,7 +104,7 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
       val now = new java.util.Date
       if(!isUpdate) row('created) = now    
       row('modified) = now
-      row('document) = nodeToFormattedString(doc)
+      row('document) = Xml.toFormattedString(doc)
     }
     
     for(view <- views)
@@ -117,14 +128,5 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
       view.remove(name,id)
     store._documents.findAll where ('_collection === name and '_id === id) delete
   }
-
-	def nodeToFormattedString(node:Node, indent:Int = 2) = {
-    val stringWriter = new StringWriter()
-    val transformer = transformerFactory.newTransformer() 
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", indent.toString)
-    transformer.transform(new DOMSource(node), new StreamResult(stringWriter))
-    stringWriter.toString()
-	}
   
 }

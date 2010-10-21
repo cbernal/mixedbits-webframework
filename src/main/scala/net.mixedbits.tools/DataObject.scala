@@ -151,6 +151,11 @@ object DataSeq{
     new DataSeq({val list = new BasicDBList;seq foreach {x => list.add(implicitly[DataValue[T]].toRawType(x).asInstanceOf[AnyRef])};list})
 }
 
+object DataObject{
+  def load[T <: DataObject : ClassManifest,F:DataFormat](value:F) = 
+    implicitly[ClassManifest[T]].erasure.newInstance().asInstanceOf[T].loadJsonData(implicitly[DataFormat[F]].decode(value))
+}
+
 trait DataObject{
   dataObject =>
   def tagName = getClass.getSimpleName
