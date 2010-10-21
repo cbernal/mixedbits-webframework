@@ -19,7 +19,7 @@ class XmlStore(val schema:DocumentSchema, val sqlDatabase:SqlDatabase){
     _collections(name)
   
   
-  def collection[T <: AnyRef:Manifest](name:String) = new Collection[T](name)
+  def collection[T <: AnyRef](name:String)(implicit manifest:ClassManifest[T],xmlConverter:XmlConverter[T]) = new Collection[T](name)
   
   def view(name:String) = views.filter(_.name == name).head
   
