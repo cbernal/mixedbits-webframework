@@ -11,9 +11,9 @@ object ffmpeg extends ((String,InputStream,String,OutputStream,Double=>Unit)=>Un
   
     val process = Runtime.getRuntime().exec("ffmpeg "+inputParams+" -i - "+outputParams+" -")
     val threads = List(
-                    thread{ process.getOutputStream() map {IO.pipeStream(inputStream,_)} },
-                    thread{ process.getInputStream() map {IO.pipeStream(_,outputStream)} },
-                    thread{
+                    startThread{ process.getOutputStream() map {IO.pipeStream(inputStream,_)} },
+                    startThread{ process.getInputStream() map {IO.pipeStream(_,outputStream)} },
+                    startThread{
                     var duration = 1.0
                     for(error <- process.getErrorStream();line <- Source.fromInputStream(error).getLines)
                       if(line contains "Duration")
@@ -22,7 +22,6 @@ object ffmpeg extends ((String,InputStream,String,OutputStream,Double=>Unit)=>Un
                         progress(min(duration,((line split "\\s+" filter {_ startsWith "time="} head) drop 5).parseDouble(0)) / duration)
                     })
     
-    threads foreach {_.start}
     threads foreach {_.join}
     if(process.waitFor != 0)
       error("Exited with error code: "+process.exitValue)
