@@ -124,7 +124,7 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
     id
   }
   
-  def select(rawSqlQuery:String)(implicit connection:SqlConnection):Iterator[Document] = new Iterator[Document]{
+  def select(rawSqlQuery:String):Iterator[Document] = store.sqlDatabase{ implicit connection => new Iterator[Document]{
     val statement = connection.rawConnection.createStatement()
     val results = statement.executeQuery(rawSqlQuery)
     val metadata = results.getMetaData()
@@ -135,7 +135,7 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
     
     def hasNext = results.hasNext
     def next = Document(store,results.getString("_collection"),results.getString("_id"),extraColumnNames.map(name => Symbol(name) -> results.getString(name)):_*)
-  }
+  }}
   
   def retreive[X:CollectionOutputFormat](id:String):X = 
     implicitly[CollectionOutputFormat[X]].retreive(id)
