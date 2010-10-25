@@ -6,6 +6,7 @@ case class Document(store:XmlStore,collection:String,id:String,columns:(Symbol,S
   
   def asString = rawDocument
   def asDocument = collectionReference.loadAsDocument(rawDocument)
+  def asElem = collectionReference.loadAsElem(rawDocument)
   def as[T] = collectionReference.loadAsObject(rawDocument).asInstanceOf[T]
   
   def apply(symbol:Symbol) = columns.filter(_._1 == symbol).head._2
