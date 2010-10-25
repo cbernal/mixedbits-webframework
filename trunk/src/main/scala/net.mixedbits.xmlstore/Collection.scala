@@ -76,6 +76,10 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
       def retreive(id:String):org.w3c.dom.Document = Xml.parse(StringOutputFormat.retreive(id)).getOwnerDocument
       def fromRawString(data:String) = Xml.parse(data).getOwnerDocument
     }
+    implicit object ElemOutputFormat extends CollectionOutputFormat[scala.xml.Elem]{
+      def retreive(id:String):scala.xml.Elem = scala.xml.XML.loadString(StringOutputFormat.retreive(id))
+      def fromRawString(data:String):scala.xml.Elem = scala.xml.XML.loadString(data)
+    }
     implicit object specificOutputFormat extends CollectionOutputFormat[T]{
       def retreive(id:String):T = xmlConverter.fromString(StringOutputFormat.retreive(id))
       def fromRawString(data:String):T = xmlConverter.fromString(data)
@@ -138,9 +142,11 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
   
   def retreiveAsString(id:String) = retreive[String](id)
   def retreiveAsDocument(id:String) = retreive[org.w3c.dom.Document](id)
+  def retreiveAsElem(id:String) = retreive[scala.xml.Elem](id)
   def retreiveAsObject(id:String) = retreive[T](id)
   
   def loadAsDocument(data:String) = implicitly[CollectionOutputFormat[org.w3c.dom.Document]].fromRawString(data)
+  def loadAsElem(data:String) = implicitly[CollectionOutputFormat[scala.xml.Elem]].fromRawString(data)
   def loadAsObject(data:String) = implicitly[CollectionOutputFormat[T]].fromRawString(data)
   
   def remove(id:String) = store.sqlDatabase{ implicit connection =>
