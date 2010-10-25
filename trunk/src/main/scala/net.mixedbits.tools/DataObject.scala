@@ -158,7 +158,8 @@ object DataObject{
 
 trait DataObject{
   dataObject =>
-  def tagName = getClass.getSimpleName
+  private val className = Objects.classNameParts(getClass.getName).last
+  def tagName = className
   
   def convertTo[T:DataFormat] = 
     implicitly[DataFormat[T]].encode(jsonData)
@@ -191,7 +192,7 @@ trait DataObject{
     property =>
     
     lazy val propertyName:String = Objects.simpleClassName(this)
-    lazy val propertyPath = propertyName.split('.').drop(1)
+    lazy val propertyPath = propertyName.split('.').dropWhile(_!=dataObject.className).drop(1)
     def parentPath:Array[String] = propertyPath.take(propertyPath.length-1)
     def shortName:String = propertyPath.last
     
@@ -240,6 +241,66 @@ trait DataFormat[T]{
 }
 
 object DataFormat{
+  implicit object DBObjectFormat extends DataFormat[DBObject]{
+    def encode(obj:DBObject) = obj
+    def decode(obj:DBObject) = obj
+  }
+  implicit object XmlElemFormat extends DataFormat[scala.xml.Elem]{
+    import scala.xml._
+    def encode(obj:DBObject):Elem = copy(obj)
+    
+    def copy(src:DBObject,name:Option[String] = None):Elem = (
+      <object>
+      {for( key <- src.keySet if key != "#"; value = src.get(key) ) yield value match {
+        case value:BasicDBList => createList(key,value)
+        case value:DBObject => copy(value,Some(key))
+        case _ => createValue(key,value)
+      }}
+      </object>
+    ).copy(label=Option(src.get("#")) collect {case s:String => s} orElse name getOrElse "object")
+
+    def createValue(name:String,value:Any):Elem = <value>{value.toString}</value>.copy(label=name)
+    
+    def createList(name:String,values:BasicDBList):Elem = (
+      <list type="seq">
+      {for( value <- values) yield value match {
+        case value:DBObject => copy(value)
+        case _ => createValue("value",value)
+      }}
+      </list>
+    ).copy(label=name)
+    
+    def decode(encoded:Elem):DBObject = 
+      decodeObject(encoded,true)
+    
+    def decodeObject(encoded:Elem,root:Boolean = false):DBObject = {
+      val obj = if(root) new BasicDBObject("#",encoded.label) else new BasicDBObject
+      for(element <- encoded.child collect {case e:Elem => e}) element match {
+        case Value(text) => obj.put(element.label,text)
+        case _ if (element \ "@type" text) == "seq" => obj.put(element.label,decodeList(element))
+        case _ => obj.put(element.label,decodeObject(element))
+      }
+      obj
+    }
+    
+    def decodeList(encoded:Elem):BasicDBList = {
+      val list = new BasicDBList
+      for(element <- encoded.child collect {case e:Elem => e}) element match {
+        case Value(text) => list.add(text)
+        case _ => list.add(decodeObject(element,true))
+      }
+      list
+    }
+    
+    object Value{
+      def unapply(e:Elem) = 
+        if(e.child.size == 1)
+          e.child collect {case t:Atom[_] => t.text} headOption
+        else
+          None
+    }
+    
+  }
   implicit object XmlDomFormat extends DataFormat[org.w3c.dom.Element]{
     import org.w3c.dom._
     def encode(obj:DBObject):Element = {
@@ -251,13 +312,10 @@ object DataFormat{
     def copy(src:DBObject,name:Option[String] = None)( implicit doc:Document):Element = {
       val node = doc.createElement(Option(src.get("#")) collect {case s:String => s} orElse name getOrElse "object")
       
-      for( key <- src.keySet if key != "#"){
-        val value = src.get(key)
-        value match {
-          case value:BasicDBList => node.appendChild(createList(key,value))
-          case value:DBObject => node.appendChild(copy(value,Some(key)))
-          case _ => node.appendChild(createValue(key,value))
-        }
+      for( key <- src.keySet if key != "#"; value = src.get(key)) value match {
+        case value:BasicDBList => node.appendChild(createList(key,value))
+        case value:DBObject => node.appendChild(copy(value,Some(key)))
+        case _ => node.appendChild(createValue(key,value))
       }
       
       node
@@ -276,7 +334,6 @@ object DataFormat{
         case value:DBObject => node.appendChild(copy(value))
         case _ => node.appendChild(createValue("value",value))
       }
-
       node
     }
     
@@ -291,7 +348,6 @@ object DataFormat{
         case _ if element.getAttribute("type") == "seq" => obj.put(element.getTagName,decodeList(element))
         case _ => obj.put(element.getTagName,decodeObject(element))
       }
-          
       obj
     }
     
