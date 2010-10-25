@@ -60,7 +60,8 @@ object Xml{
 	def text(relativeTo:Node, xpathQuery:String):String = XPathFactory.newInstance().newXPath().compile(xpathQuery).evaluate(relativeTo)
  
   
-  def elem(name:String) = scala.xml.Elem(null,name,null,scala.xml.TopScope,Nil:_*)
+  def elem(name:String) = scala.xml.Elem(null,name,null,scala.xml.TopScope)
+  def attribute(elem:scala.xml.Elem,attributeName:String) = elem.attributes.get(attributeName).map(_.text).orNull
   def attribute(name:String,value:String) = new scala.xml.UnprefixedAttribute(name,value,scala.xml.Null)
   def attributes(values:(String,String)*):scala.xml.MetaData = {
     var current:scala.xml.MetaData = null
