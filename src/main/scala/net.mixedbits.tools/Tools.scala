@@ -210,7 +210,7 @@ trait ExceptionsImports{
 }
 
 object Objects extends ObjectsImports{
-  def classNameParts(name:String) = name.split('$') filter{_!=""}
+  def classNameParts(name:String) = name.split('$').flatMap(_ split '.').filter{_!=""}
   
   def objectPath(o:AnyRef) = classNameParts(o.getClass.getSimpleName)
   def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
