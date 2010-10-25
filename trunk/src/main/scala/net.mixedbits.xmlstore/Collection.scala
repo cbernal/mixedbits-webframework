@@ -62,6 +62,7 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
   
   sealed trait CollectionOutputFormat[X]{
     def retreive(id:String):X
+    def fromRawString(data:String):X
   }
   object CollectionOutputFormat{
     implicit object StringOutputFormat extends CollectionOutputFormat[String]{
@@ -69,12 +70,15 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
         (for(row <- store._documents.findAll where ('_collection === name and '_id === id))
           yield row[String]('document)).head
       }
+      def fromRawString(data:String) = data
     }
     implicit object DomOutputFormat extends CollectionOutputFormat[org.w3c.dom.Document]{
       def retreive(id:String):org.w3c.dom.Document = Xml.parse(StringOutputFormat.retreive(id)).getOwnerDocument
+      def fromRawString(data:String) = Xml.parse(data).getOwnerDocument
     }
     implicit object specificOutputFormat extends CollectionOutputFormat[T]{
       def retreive(id:String):T = xmlConverter.fromString(StringOutputFormat.retreive(id))
+      def fromRawString(data:String):T = xmlConverter.fromString(data)
     }
   }
 
@@ -116,12 +120,28 @@ class Collection[T <: AnyRef](specifiedName:String = null)(implicit store:XmlSto
     id
   }
   
+  def select(rawSqlQuery:String)(implicit connection:SqlConnection):Iterator[Document] = new Iterator[Document]{
+    val statement = connection.rawConnection.createStatement()
+    val results = statement.executeQuery(rawSqlQuery)
+    val metadata = results.getMetaData()
+    val extraColumnNames = (for(i <- 1 to metadata.getColumnCount) yield metadata.getColumnName(i)).toList.filter(name => name != "_collection" && name != "_id")
+  
+    connection.runOnClose{results.close()}
+    connection.runOnClose{statement.close()}
+    
+    def hasNext = results.hasNext
+    def next = Document(store,results.getString("_collection"),results.getString("_id"),extraColumnNames.map(name => Symbol(name) -> results.getString(name)):_*)
+  }
+  
   def retreive[X:CollectionOutputFormat](id:String):X = 
     implicitly[CollectionOutputFormat[X]].retreive(id)
   
   def retreiveAsString(id:String) = retreive[String](id)
   def retreiveAsDocument(id:String) = retreive[org.w3c.dom.Document](id)
   def retreiveAsObject(id:String) = retreive[T](id)
+  
+  def loadAsDocument(data:String) = implicitly[CollectionOutputFormat[org.w3c.dom.Document]].fromRawString(data)
+  def loadAsObject(data:String) = implicitly[CollectionOutputFormat[T]].fromRawString(data)
   
   def remove(id:String) = store.sqlDatabase{ implicit connection =>
     for(view <- views)

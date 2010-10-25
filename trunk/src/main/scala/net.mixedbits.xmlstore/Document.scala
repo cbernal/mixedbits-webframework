@@ -1,9 +1,13 @@
 package net.mixedbits.xmlstore
 
 case class Document(store:XmlStore,collection:String,id:String,columns:(Symbol,String)*){
-  def asString = store.collections(collection).retreiveAsString(id)
-  def asDocument = store.collections(collection).retreiveAsDocument(id)
-  def as[T] = store.collections(collection).retreiveAsObject(id).asInstanceOf[T]
+  lazy val collectionReference = store.collections(collection)
+  def rawDocument = column('document) getOrElse collectionReference.retreiveAsString(id)
+  
+  def asString = rawDocument
+  def asDocument = collectionReference.loadAsDocument(rawDocument)
+  def as[T] = collectionReference.loadAsObject(rawDocument).asInstanceOf[T]
   
   def apply(symbol:Symbol) = columns.filter(_._1 == symbol).head._2
+  def column(symbol:Symbol) = columns.filter(_._1 == symbol).headOption.map(_._2)
 }
