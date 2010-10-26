@@ -220,8 +220,15 @@ trait DataObject{
   }
   class SeqProperty[T:DataValue] extends Property[DataSeq[T]]{
     private var _current:DataSeq[T] = null
-    private def current:DataSeq[T] = {if(_current == null){current = new DataSeq[T]};_current}
-    private def current_=(value:DataSeq[T]) {_current = value;put(jsonData,propertyPath:_*)(current.jsonList)} 
+    private def current:DataSeq[T] = {
+      if(_current == null)
+        current = get[DataSeq[T]](jsonData,propertyPath:_*) getOrElse new DataSeq[T]
+      _current
+    }
+    private def current_=(value:DataSeq[T]) {
+      _current = value;
+      put(jsonData,propertyPath:_*)(current.jsonList)
+    } 
     def apply():DataSeq[T] = current
     def update(value:DataSeq[T]) = {current = value;dataObject}
     def apply(values:T*):dataObject.type = update(DataSeq(values))
