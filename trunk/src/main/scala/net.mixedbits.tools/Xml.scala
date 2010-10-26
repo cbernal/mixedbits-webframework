@@ -29,13 +29,13 @@ object Xml{
   }
   def writeNode(node:Node, writer:Writer) = TransformerFactory.newInstance().newTransformer().transform(new DOMSource(node), new StreamResult(writer))
 
-  def toFormattedString(node:Node):String = toFormattedString(node,2)
-
-	def toFormattedString(node:Node, indent:Int) = {
+	def toFormattedString(node:Node, indent:Int = 2, omitDeclaration:Boolean = true) = {
     val xmlInput = new DOMSource(node)
     val stringWriter = new StringWriter()
     val xmlOutput = new StreamResult(stringWriter)
     val transformer = TransformerFactory.newInstance().newTransformer() 
+    if(omitDeclaration)
+      transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes")
     transformer.setOutputProperty(OutputKeys.INDENT, "yes")
     transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", indent.toString)
     transformer.transform(xmlInput, xmlOutput)
