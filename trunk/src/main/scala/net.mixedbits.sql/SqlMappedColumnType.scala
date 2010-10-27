@@ -20,7 +20,8 @@ object SqlMappedColumnType{
   implicit object SqlDouble extends SqlMappedColumnType( _ getDouble _ )( _ updateDouble (_,_) )( _ setDouble (_,_) )
   implicit object SqlString extends SqlMappedColumnType( _ getString _ )( _ updateString (_,_) )( _ setString (_,_) )
   implicit object SqlDate extends SqlMappedColumnType[java.util.Date]( _ getTimestamp _ )( _ updateTimestamp (_,_) )( _ setTimestamp (_,_) )
-  implicit object SqlBlob extends SqlMappedColumnType[Array[Byte]]( _ getBytes _ )( _ updateBytes (_,_) )( _ setBytes (_,_) )
+  implicit object SqlBinary extends SqlMappedColumnType[Array[Byte]]( _ getBytes _ )( _ updateBytes (_,_) )( _ setBytes (_,_) )
+  implicit object SqlBlob extends SqlMappedColumnType[Blob]( _ getBlob _ )( _ updateBlob (_,_) )( _ setBlob (_,_) )
   
   object SqlObject extends SqlMappedColumnType[Any]( _ getObject _)( _ updateObject (_,_) )( _ setObject (_,_) )
   
