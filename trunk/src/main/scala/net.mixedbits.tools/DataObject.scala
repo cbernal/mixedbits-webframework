@@ -1,6 +1,7 @@
 package net.mixedbits.tools
 
-import com.mongodb._
+import org.bson.{BSONObject,BasicBSONObject}
+import org.bson.types.BasicBSONList
 import scala.collection.JavaConversions._
 
 /*
@@ -51,7 +52,7 @@ sealed abstract class PrimitiveDataValue[T] extends DataValue[T]{
 object DataValue{
   implicit def objectData[T <: DataObject : Manifest] = new DataValue[T]{
     def toProperType(value:Any) = value match {
-      case obj:DBObject => Some(manifest[T].erasure.newInstance.asInstanceOf[T].loadJsonData(obj))
+      case obj:BSONObject => Some(manifest[T].erasure.newInstance.asInstanceOf[T].loadJsonData(obj))
       case _ => None
     }
     def toRawType(value:T) = value.jsonData
@@ -62,7 +63,7 @@ object DataValue{
   }
   implicit def seqData[T:DataValue] = new DataValue[DataSeq[T]]{
     def toProperType(value:Any) = value match {
-      case list:BasicDBList => Some(new DataSeq(list))
+      case list:BasicBSONList => Some(new DataSeq(list))
       case _ => None
     }
     def toRawType(value:DataSeq[T]) = value.jsonList
@@ -132,8 +133,8 @@ object DataValue{
 
 }
 
-class DataSeq[T:DataValue](protected[tools] val jsonList:BasicDBList) extends scala.collection.mutable.Seq[T]{
-  def this() = this(new BasicDBList)
+class DataSeq[T:DataValue](protected[tools] val jsonList:BasicBSONList) extends scala.collection.mutable.Seq[T]{
+  def this() = this(new BasicBSONList)
   def update(idx:Int,elem:T) = jsonList.put(idx,implicitly[DataValue[T]].toRawType(elem))
   def apply(idx:Int) = implicitly[DataValue[T]].toProperType(jsonList.get(idx)) getOrElse error("bad data conversion")
   def length = jsonList.size
@@ -148,7 +149,7 @@ class DataSeq[T:DataValue](protected[tools] val jsonList:BasicDBList) extends sc
 
 object DataSeq{
   implicit def apply[T:DataValue](seq:Seq[T]):DataSeq[T] =
-    new DataSeq({val list = new BasicDBList;seq foreach {x => list.add(implicitly[DataValue[T]].toRawType(x).asInstanceOf[AnyRef])};list})
+    new DataSeq({val list = new BasicBSONList;seq foreach {x => list.add(implicitly[DataValue[T]].toRawType(x).asInstanceOf[AnyRef])};list})
 }
 
 object DataObject{
@@ -165,27 +166,27 @@ trait DataObject{
     implicitly[DataFormat[T]].encode(jsonData)
   
   
-  protected[tools] def loadJsonData(data:DBObject):dataObject.type = {jsonData = data;this}
+  protected[tools] def loadJsonData(data:BSONObject):dataObject.type = {jsonData = data;this}
   
-  protected[tools] var jsonData:DBObject = new BasicDBObject("#",tagName)
+  protected[tools] var jsonData:BSONObject = new BasicBSONObject("#",tagName)
   
-  private def get[T:DataValue](obj:DBObject,names:String*):Option[T] = {
-    def recurse(obj:Option[DBObject],names:List[String]):Option[DBObject] = names match {
+  private def get[T:DataValue](obj:BSONObject,names:String*):Option[T] = {
+    def recurse(obj:Option[BSONObject],names:List[String]):Option[BSONObject] = names match {
       case Nil => obj
-      case head :: tail => recurse(obj map {_.get(head)} collect {case o:DBObject => o},tail)
+      case head :: tail => recurse(obj map {_.get(head)} collect {case o:BSONObject => o},tail)
     }
     recurse(Option(obj),names.dropRight(1).toList) flatMap {x => implicitly[DataValue[T]].toProperType(x.get(names.last))}
   }
   
-  private def ensureExists(obj:DBObject,names:String*):DBObject = {
-    def recurse(obj:DBObject,names:List[String]):DBObject = names match{
+  private def ensureExists(obj:BSONObject,names:String*):BSONObject = {
+    def recurse(obj:BSONObject,names:List[String]):BSONObject = names match{
       case Nil => obj
-      case head :: tail => recurse(Option(obj.get(head)) collect {case o:DBObject => o} getOrElse { new BasicDBObject |>> {obj.put(head,_)} },tail)
+      case head :: tail => recurse(Option(obj.get(head)) collect {case o:BSONObject => o} getOrElse { new BasicBSONObject |>> {obj.put(head,_)} },tail)
     }
     recurse(obj,names.toList)
   }
   
-  private def put(obj:DBObject,names:String*)(value:Any) = 
+  private def put(obj:BSONObject,names:String*)(value:Any) = 
     ensureExists(obj,names dropRight 1:_*).put(names.last,value)
 
   sealed abstract class Property[T:DataValue]{
@@ -243,24 +244,24 @@ class DataCompanion[T <: DataObject:Manifest]{
 }
 
 trait DataFormat[T]{
-  def encode(obj:DBObject):T
-  def decode(encoded:T):DBObject
+  def encode(obj:BSONObject):T
+  def decode(encoded:T):BSONObject
 }
 
 object DataFormat{
-  implicit object DBObjectFormat extends DataFormat[DBObject]{
-    def encode(obj:DBObject) = obj
-    def decode(obj:DBObject) = obj
+  implicit object BSONObjectFormat extends DataFormat[BSONObject]{
+    def encode(obj:BSONObject) = obj
+    def decode(obj:BSONObject) = obj
   }
   implicit object XmlElemFormat extends DataFormat[scala.xml.Elem]{
     import scala.xml._
-    def encode(obj:DBObject):Elem = copy(obj)
+    def encode(obj:BSONObject):Elem = copy(obj)
     
-    def copy(src:DBObject,name:Option[String] = None):Elem = (
+    def copy(src:BSONObject,name:Option[String] = None):Elem = (
       <object>
       {for( key <- src.keySet if key != "#"; value = src.get(key) ) yield value match {
-        case value:BasicDBList => createList(key,value)
-        case value:DBObject => copy(value,Some(key))
+        case value:BasicBSONList => createList(key,value)
+        case value:BSONObject => copy(value,Some(key))
         case _ => createValue(key,value)
       }}
       </object>
@@ -268,20 +269,20 @@ object DataFormat{
 
     def createValue(name:String,value:Any):Elem = <value>{value.toString}</value>.copy(label=name)
     
-    def createList(name:String,values:BasicDBList):Elem = (
+    def createList(name:String,values:BasicBSONList):Elem = (
       <list type="seq">
       {for( value <- values) yield value match {
-        case value:DBObject => copy(value)
+        case value:BSONObject => copy(value)
         case _ => createValue("value",value)
       }}
       </list>
     ).copy(label=name)
     
-    def decode(encoded:Elem):DBObject = 
+    def decode(encoded:Elem):BSONObject = 
       decodeObject(encoded,true)
     
-    def decodeObject(encoded:Elem,root:Boolean = false):DBObject = {
-      val obj = if(root) new BasicDBObject("#",encoded.label) else new BasicDBObject
+    def decodeObject(encoded:Elem,root:Boolean = false):BSONObject = {
+      val obj = if(root) new BasicBSONObject("#",encoded.label) else new BasicBSONObject
       for(element <- encoded.child collect {case e:Elem => e}) element match {
         case Value(text) => obj.put(element.label,text)
         case _ if (element \ "@type" text) == "seq" => obj.put(element.label,decodeList(element))
@@ -290,8 +291,8 @@ object DataFormat{
       obj
     }
     
-    def decodeList(encoded:Elem):BasicDBList = {
-      val list = new BasicDBList
+    def decodeList(encoded:Elem):BasicBSONList = {
+      val list = new BasicBSONList
       for(element <- encoded.child collect {case e:Elem => e}) element match {
         case Value(text) => list.add(text)
         case _ => list.add(decodeObject(element,true))
@@ -310,18 +311,18 @@ object DataFormat{
   }
   implicit object XmlDomFormat extends DataFormat[org.w3c.dom.Element]{
     import org.w3c.dom._
-    def encode(obj:DBObject):Element = {
+    def encode(obj:BSONObject):Element = {
       implicit val doc = Xml.createDocument
       doc.appendChild(copy(obj))
       doc.getDocumentElement
     }
     
-    def copy(src:DBObject,name:Option[String] = None)( implicit doc:Document):Element = {
+    def copy(src:BSONObject,name:Option[String] = None)( implicit doc:Document):Element = {
       val node = doc.createElement(Option(src.get("#")) collect {case s:String => s} orElse name getOrElse "object")
       
       for( key <- src.keySet if key != "#"; value = src.get(key)) value match {
-        case value:BasicDBList => node.appendChild(createList(key,value))
-        case value:DBObject => node.appendChild(copy(value,Some(key)))
+        case value:BasicBSONList => node.appendChild(createList(key,value))
+        case value:BSONObject => node.appendChild(copy(value,Some(key)))
         case _ => node.appendChild(createValue(key,value))
       }
       
@@ -334,22 +335,22 @@ object DataFormat{
       node
     }
     
-    def createList(name:String,values:BasicDBList)(implicit doc:Document):Node = {
+    def createList(name:String,values:BasicBSONList)(implicit doc:Document):Node = {
       val node = doc.createElement(name)
       node.setAttribute("type","seq")
       for( value <- values) value match {
-        case value:DBObject => node.appendChild(copy(value))
+        case value:BSONObject => node.appendChild(copy(value))
         case _ => node.appendChild(createValue("value",value))
       }
       node
     }
     
     
-    def decode(encoded:Element):DBObject = 
+    def decode(encoded:Element):BSONObject = 
       decodeObject(encoded,true)
     
-    def decodeObject(encoded:Element,root:Boolean = false):DBObject = {
-      val obj = if(root) new BasicDBObject("#",encoded.getTagName) else new BasicDBObject
+    def decodeObject(encoded:Element,root:Boolean = false):BSONObject = {
+      val obj = if(root) new BasicBSONObject("#",encoded.getTagName) else new BasicBSONObject
       for(element <- Xml.elements(encoded,"*")) element match {
         case Value(text) => obj.put(element.getTagName,text)
         case _ if element.getAttribute("type") == "seq" => obj.put(element.getTagName,decodeList(element))
@@ -358,8 +359,8 @@ object DataFormat{
       obj
     }
     
-    def decodeList(encoded:Element):BasicDBList = {
-      val list = new BasicDBList
+    def decodeList(encoded:Element):BasicBSONList = {
+      val list = new BasicBSONList
       for(element <- Xml.elements(encoded,"*")) element match {
         case Value(text) => list.add(text)
         case _ => list.add(decodeObject(element,true))
