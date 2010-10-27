@@ -58,6 +58,11 @@ trait SqlDatabase{
             case SqlFloat32 => ("FLOAT","")
             case SqlFloat64 => ("DOUBLE","")
           }
+          case SqlBlobColumn(size) => size match {
+            case SqlSmallBlob => ("BLOB","")
+            case SqlMediumBlob => ("MEDIUMBLOB","")
+            case SqlLargeBlob => ("LONGBLOB","")
+          }
           case SqlDateTimeColumn => ("DATETIME","")
           case SqlBoolColumn => ("BOOL","")
           case SqlAutoIncrementColumn => ("BIGINT","auto_increment")
