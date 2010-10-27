@@ -97,8 +97,7 @@ class DataStore(schema:String,documentsTable:String){
       for(function <- viewStoreFunctions)
         function(connection,this,value)
     }
-    def rawQuery(query:String)(implicit connection:SqlConnection):Iterator[T] = new Iterator[T]{
-      val statement = connection.rawConnection.prepareStatement(query)
+    def rawQuery(statement:PreparedStatement)(implicit connection:SqlConnection):Iterator[T] = new Iterator[T]{
       val results = statement.executeQuery()
       connection.runOnClose{ results.close() }
       
@@ -109,7 +108,7 @@ class DataStore(schema:String,documentsTable:String){
         DataObject.load[T,org.bson.BSONObject](decoder.readObject(blob.getBinaryStream))
       }
     }
-    def findAll(viewQueries:ViewQuery*)(implicit connection:SqlConnection):Iterator[T] = new Iterator[T]{
+    def findAll(viewQueries:ViewQuery*)(implicit connection:SqlConnection):Iterator[T] = {
       
       type CapturedValue = (PreparedStatement,Int)=>Unit
       
@@ -147,17 +146,7 @@ class DataStore(schema:String,documentsTable:String){
         }
       }
       
-      val results = statement.executeQuery()
-      connection.runOnClose{ results.close() }
-      
-      
-      
-      def hasNext = results.next()
-      def next = {
-        val blob = results.getBlob("_document")
-        val decoder = new org.bson.BSONDecoder()
-        DataObject.load[T,org.bson.BSONObject](decoder.readObject(blob.getBinaryStream))
-      }
+      rawQuery(statement)
     }
     
   }
