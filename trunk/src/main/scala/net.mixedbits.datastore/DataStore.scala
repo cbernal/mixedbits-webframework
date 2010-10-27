@@ -97,6 +97,8 @@ class DataStore(schema:String,documentsTable:String){
       for(function <- viewStoreFunctions)
         function(connection,this,value)
     }
+    
+    def rawQuery(statement:String)(implicit connection:SqlConnection):Iterator[T] = rawQuery(connection.rawConnection.prepareStatement(statement))
     def rawQuery(statement:PreparedStatement)(implicit connection:SqlConnection):Iterator[T] = new Iterator[T]{
       val results = statement.executeQuery()
       connection.runOnClose{ results.close() }
