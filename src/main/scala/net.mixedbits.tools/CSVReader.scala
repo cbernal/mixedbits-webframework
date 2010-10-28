@@ -3,27 +3,30 @@ package net.mixedbits.tools
 import java.io._
 import org.supercsv.io._
 import org.supercsv.prefs._
-    
-class CSVReader(file:File,headers:Array[String] = null) extends Iterable[scala.collection.mutable.Map[String,String]]{
-  def headerOption = Option(headers)
-          
-  def iterator = new Iterator[scala.collection.mutable.Map[String,String]]{
-    private lazy val reader = new CsvMapReader(new FileReader(file),CsvPreference.EXCEL_PREFERENCE)
-    private lazy val header = headerOption getOrElse reader.getCSVHeader(true)
-    
-    private var current:scala.collection.mutable.Map[String,String] = null
-    
-    def next():scala.collection.mutable.Map[String,String] = current
-    def hasNext():Boolean = {
-      val line = reader.read(header:_*)
-      if(line == null){
-        reader.close
-        false
-      }
-      else{
-        current = scala.collection.JavaConversions.asMap(line)
-        true
+import scala.collection.JavaConversions._
+
+class CSVReader(reader:Reader,headers:Array[String] = null,preferences:CsvPreference = null) extends Iterable[Map[String,String]] with Closeable{
+  csv =>
+  private lazy val csvTokenizer = new Tokenizer(reader,Option(preferences) getOrElse CsvPreference.EXCEL_PREFERENCE)
+  def close() = csvTokenizer.close()
+  def readLine() = {
+    val line = new java.util.ArrayList[String]
+    csvTokenizer.readStringList(line)
+    line.toArray(Array.ofDim[String](line.size))
+  }
+  def iterator = new Iterator[Map[String,String]]{
+    val headers = Option(csv.headers) getOrElse readLine()
+    var current:Array[String] = null
+    def hasNext() = {
+      current = readLine()
+      current.size match {
+        case x if x == headers.size =>
+          true
+        case _ =>
+          close()
+          false
       }
     }
+    def next() = Map(headers zip current:_*)
   }
 }
