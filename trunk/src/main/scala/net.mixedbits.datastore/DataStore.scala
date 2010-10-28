@@ -35,39 +35,47 @@ class DataStore(schema:String,documentsTable:String){
   
   class Row(val values:Seq[Any])
   case class ViewQuery(view:View,criteria:SqlCriteria)
+  trait RegisteredView[T <: DataObject]{
+    def store(collection:Collection[T],value:T)(implicit connection:SqlWriteConnection)
+    def remove(collection:Collection[T],id:String)(implicit connection:SqlWriteConnection)
+  }
   class View(val name:String,columns:Seq[SqlColumn]){
     views += this
     val table = SqlTable(name,"_collection","_id","_row")(Seq(_collection,_id,_row) ++ columns:_*)
-    def store[T <: DataObject](rowExtractor: T => Seq[Row]):(SqlWriteConnection,Collection[T],T) => Unit = {(connection:SqlWriteConnection,collection:Collection[T],value:T) =>
-      implicit val con = connection
-    
-      val id = collection.idExtractor(value).value
-      
-      //remove old values
-      table.findAll where ('_collection === collection.name and '_id === id) delete
-      
-      //store new values
-      for(newRow <- rowExtractor(value)) table.insert{ row =>
-        row('_collection) = collection.name
-        row('_id) = id
+    def store[T <: DataObject](rowExtractor: T => Seq[Row]):RegisteredView[T] = new RegisteredView[T]{
+      def remove(collection:Collection[T],id:String)(implicit connection:SqlWriteConnection) = 
+        table.findAll where ('_collection === collection.name and '_id === id) delete
 
-        for( (newValue,SqlColumn(name,columnType)) <- newRow.values zip columns){
-          columnType match {
-            case SqlStringColumn(_) => row(Symbol(name)) = newValue.asInstanceOf[String]
-            case SqlIntColumn(size) => size match {
-              case SqlInt8 => row(Symbol(name)) = newValue.asInstanceOf[Byte]
-              case SqlInt16 => row(Symbol(name)) = newValue.asInstanceOf[Short]
-              case SqlInt32 => row(Symbol(name)) = newValue.asInstanceOf[Int]
-              case SqlInt64 => row(Symbol(name)) = newValue.asInstanceOf[Long]
+      def store(collection:Collection[T],value:T)(implicit connection:SqlWriteConnection){
+      
+        val id = collection.idExtractor(value).value
+        
+        //remove old values
+        remove(collection,id)
+        
+        //store new values
+        for(newRow <- rowExtractor(value)) table.insert{ row =>
+          row('_collection) = collection.name
+          row('_id) = id
+  
+          for( (newValue,SqlColumn(name,columnType)) <- newRow.values zip columns){
+            columnType match {
+              case SqlStringColumn(_) => row(Symbol(name)) = newValue.asInstanceOf[String]
+              case SqlIntColumn(size) => size match {
+                case SqlInt8 => row(Symbol(name)) = newValue.asInstanceOf[Byte]
+                case SqlInt16 => row(Symbol(name)) = newValue.asInstanceOf[Short]
+                case SqlInt32 => row(Symbol(name)) = newValue.asInstanceOf[Int]
+                case SqlInt64 => row(Symbol(name)) = newValue.asInstanceOf[Long]
+              }
+              case SqlFloatColumn(size) => size match {
+                case SqlFloat32 => row(Symbol(name)) = newValue.asInstanceOf[Float]
+                case SqlFloat64 => row(Symbol(name)) = newValue.asInstanceOf[Double]
+              }
+              case SqlBlobColumn(_) => row(Symbol(name)) = newValue.asInstanceOf[Blob] //???
+              case SqlDateTimeColumn => row(Symbol(name)) = newValue.asInstanceOf[java.util.Date]
+              case SqlBoolColumn => row(Symbol(name)) = newValue.asInstanceOf[Boolean]
+              case SqlAutoIncrementColumn => row(Symbol(name)) = newValue.asInstanceOf[Long]
             }
-            case SqlFloatColumn(size) => size match {
-              case SqlFloat32 => row(Symbol(name)) = newValue.asInstanceOf[Float]
-              case SqlFloat64 => row(Symbol(name)) = newValue.asInstanceOf[Double]
-            }
-            case SqlBlobColumn(_) => row(Symbol(name)) = newValue.asInstanceOf[Blob] //???
-            case SqlDateTimeColumn => row(Symbol(name)) = newValue.asInstanceOf[java.util.Date]
-            case SqlBoolColumn => row(Symbol(name)) = newValue.asInstanceOf[Boolean]
-            case SqlAutoIncrementColumn => row(Symbol(name)) = newValue.asInstanceOf[Long]
           }
         }
       }
@@ -75,7 +83,7 @@ class DataStore(schema:String,documentsTable:String){
     def matches(criteria:SqlCriteria) = ViewQuery(this,criteria)
   }
 
-  class Collection[T <: DataObject:ClassManifest](val name:String,val idExtractor: T=>T#Property[String],val viewStoreFunctions: Seq[(SqlWriteConnection,Collection[T],T)=>Any]){
+  class Collection[T <: DataObject:ClassManifest](val name:String,val idExtractor: T=>T#Property[String],val registeredViews: Seq[RegisteredView[T]]){
     collections += this
   
     def store(value:T)(implicit connection:SqlWriteConnection){
@@ -94,8 +102,12 @@ class DataStore(schema:String,documentsTable:String){
         row('_document) = org.bson.BSON.encode(value.convertTo[org.bson.BSONObject])
       }
       
-      for(function <- viewStoreFunctions)
-        function(connection,this,value)
+      registeredViews foreach {_.store(this,value)}
+    }
+    
+    def remove(id:String)(implicit connection:SqlWriteConnection){
+      registeredViews foreach {_.remove(this,id)}      
+      _documents.findAll where ('_collection === name and '_id === id) delete
     }
     
     def rawQuery(statement:String)(implicit connection:SqlConnection):Iterator[T] = rawQuery(connection.rawConnection.prepareStatement(statement))
@@ -155,7 +167,7 @@ class DataStore(schema:String,documentsTable:String){
   
   def row(values:Any*) = new Row(values)
   def view(name:String,columns:SqlColumn*) = new View(name,columns)
-  def collection[T <: DataObject:ClassManifest](name:String)(idExtractor: T=>T#Property[String])(viewStoreFunctions: ((SqlWriteConnection,Collection[T],T)=>Any)*) = new Collection(name,idExtractor,viewStoreFunctions)  
+  def collection[T <: DataObject:ClassManifest](name:String)(idExtractor: T=>T#Property[String])(registeredViews: RegisteredView[T]*) = new Collection(name,idExtractor,registeredViews)  
 }
 
 case class DataRecord(collection:String,id:String,columns:(Symbol,String)*){
@@ -215,8 +227,6 @@ object DataStore{
       //                  Documents.realestate matches ('price >= 100000),
       //                  Documents.tags matches ('tag === "teh")
       //                )) println(listing)
-                      
-
 
   }
   
