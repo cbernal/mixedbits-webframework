@@ -24,7 +24,7 @@ class DataStore(schema:String,documentsTable:String){
   private val collections = new scala.collection.mutable.ListBuffer[Collection[_]]
   
   private var validated = false
-  private def validate(implicit connection:SqlWriteConnection){
+  protected def validate(implicit connection:SqlWriteConnection){
     if(validated)
       return;
     validated = true
