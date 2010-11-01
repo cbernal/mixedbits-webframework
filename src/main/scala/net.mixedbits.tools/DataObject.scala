@@ -1,6 +1,6 @@
 package net.mixedbits.tools
 
-import org.bson.{BSONObject,BasicBSONObject}
+import org.bson._
 import org.bson.types.BasicBSONList
 import scala.collection.JavaConversions._
 
@@ -153,8 +153,20 @@ object DataSeq{
 }
 
 object DataObject{
+  def newInstance[T <: DataObject:ClassManifest] = 
+    implicitly[ClassManifest[T]].erasure.newInstance().asInstanceOf[T]
+  
   def load[T <: DataObject : ClassManifest,F:DataFormat](value:F) = 
-    implicitly[ClassManifest[T]].erasure.newInstance().asInstanceOf[T].loadJsonData(implicitly[DataFormat[F]].decode(value))
+    newInstance[T].loadJsonData(implicitly[DataFormat[F]].decode(value))
+  
+  def fromJson[T <: DataObject:ClassManifest](json:String) =
+    newInstance[T].loadJsonData(com.mongodb.util.JSON.parse(json).asInstanceOf[com.mongodb.BasicDBObject])
+  
+  def fromBson[T <: DataObject:ClassManifest](input:java.io.InputStream) = 
+    newInstance[T].loadJsonData(new BSONDecoder().readObject(input))
+  
+  def fromBson[T <: DataObject:ClassManifest](bytes:Array[Byte]) = 
+    newInstance[T].loadJsonData(new BSONDecoder().readObject(bytes))
 }
 
 trait DataObject{
@@ -165,6 +177,9 @@ trait DataObject{
   def convertTo[T:DataFormat] = 
     implicitly[DataFormat[T]].encode(jsonData)
   
+  def toJson = dataObject.toString
+  
+  def toBson = BSON.encode(dataObject.jsonData)
   
   protected[tools] def loadJsonData(data:BSONObject):dataObject.type = {jsonData = data;this}
   
@@ -240,7 +255,11 @@ trait DataObject{
 
 class DataCompanion[T <: DataObject:Manifest]{
   def apply():T = manifest[T].erasure.newInstance().asInstanceOf[T]
-  def load[T:DataFormat](value:T) = apply().loadJsonData(implicitly[DataFormat[T]].decode(value))
+ 
+  def load[F:DataFormat](value:F) = DataObject.load[T,F](value)
+  def fromJson(json:String) = DataObject.fromJson[T](json)  
+  def fromBson[T <: DataObject:ClassManifest](input:java.io.InputStream) = DataObject.fromBson[T](input)
+  def fromBson[T <: DataObject:ClassManifest](bytes:Array[Byte]) = DataObject.fromBson[T](bytes)    
 }
 
 trait DataFormat[T]{
