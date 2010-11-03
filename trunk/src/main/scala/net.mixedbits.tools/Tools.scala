@@ -119,15 +119,17 @@ object Files extends FilesImports{
     }
   }
   
+  def readAllText(file:File,encoding:String = "UTF-8"):String =
+    for(stream <- use(new FileInputStream(file))) yield IO.readAllText(stream,encoding)
+  
   def userPath(start:String,remaining:String*):File = path(new File(System.getProperty("user.home"),start),remaining:_*)
   def path(start:String,remaining:String*):File = path(new File(start),remaining:_*)
   def path(start:File,remaining:String*):File = {
     var result = start
     for(part <- remaining)
       result = new File(result,part)
-    result    
+    result
   }
-  
 
   
   def tempFolder():File = {
@@ -185,6 +187,9 @@ class ExtendedFile(path:String) extends java.io.File(path){
   
   def createParents() = {parent.mkdirs();this}
   def createFolders() = {mkdirs();this}
+  
+  def readAllText(encoding:String = "UTF-8") = 
+    Files.readAllText(this,encoding)
 }
 
 object Network extends NetworkImports
@@ -241,10 +246,7 @@ trait BlockStatementsImports{
 	  catch{ case _ => None }
 	
 	def default[T](defaultValue: => T)(f: =>T):T =
-    attempt(f) match {
-      case Some(value) => value
-      case None => defaultValue
-    }
+    attempt(f) getOrElse defaultValue
 
   /* timing */
   def time[T](f: =>T):(Long,T) = {
@@ -255,52 +257,28 @@ trait BlockStatementsImports{
       val result:T = f
       errorOccurred = false
       return (System.currentTimeMillis - start,result)
-    }
-    finally{
-      if(errorOccurred){
-        val duration = System.currentTimeMillis - start
-        println("An error occurred timing a process, elapsed time: "+(duration/1000.0)+" seconds")
-      }
+    } finally {
+      if(errorOccurred)
+        println("An error occurred timing a process, elapsed time: "+((System.currentTimeMillis - start)/1000.0)+" seconds")
     }
   }
   
   def printDuration[T](f: =>T):T = printDuration(""){f}
   def printDuration[T](description:String)(f: =>T):T = {
+    val desc = if(description != "") " '"+description else ""
+    println("starting"+desc )
     val start = System.currentTimeMillis
     try{
       return f
-    }
-    finally{
-      val duration = System.currentTimeMillis - start
-      val title = if(description == "")
-                    "Process"
-                  else
-                    "'"+description+"'"
-      println(title+" took "+(duration/1000.0)+" seconds") 
+    } finally {
+      println("finished"+desc+" in "+((System.currentTimeMillis - start)/1000.0)+" seconds")
     }
   }
   
   /* threading */
-  def thread(block: =>Any) = {
-    val t = new Thread(new Runnable{
-      def run(){
-        block
-      }
-    })
-    t
-  }
-  
-  def daemonThread(block: =>Any) = {
-    val t = thread{ block }
-    t.setDaemon(true)
-    t
-  }
-
-  def startThread(block: =>Any) = {
-    val t = thread{ block }
-    t.start()
-    t
-  }
+  def thread(block: =>Any) = new Thread(new Runnable{ def run(){ block } })
+  def daemonThread(block: =>Any) = {val t = thread{ block };t.setDaemon(true);t}
+  def startThread(block: =>Any) = {val t = thread{ block };t.start();t}
 
   /* caching */
   def cacheFor[T](duration:Duration)(generator: =>T) = new Cache(duration,{generator})
@@ -496,9 +474,7 @@ trait IOImports{
   val defaultBufferSize = 1024*16 // 16k
   
   def using[T <: Closeable,R](closeable:T)(body: T=>R):R = {
-    try{
-      body(closeable)
-    }
+    try{ body(closeable) }
     finally{
       if(closeable!=null)
         closeable.close()
@@ -518,10 +494,7 @@ trait IOImports{
     }
   }
   
-  def readAllText(inputStream:InputStream):String = 
-    readAllText(inputStream,"UTF-8")
-  
-  def readAllText(inputStream:InputStream,encoding:String):String = {
+  def readAllText(inputStream:InputStream,encoding:String = "UTF-8"):String = {
     val outputStream = new ByteArrayOutputStream
     pipeStream(inputStream,outputStream)
     outputStream.toString(encoding)
