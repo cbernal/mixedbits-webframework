@@ -10,11 +10,11 @@ object ffmpeg extends ((String,InputStream,String,OutputStream,Double=>Unit)=>Un
   
     val process = Runtime.getRuntime().exec("ffmpeg "+inputParams+" -i - "+outputParams+" -")
     val threads = List(
-                    startThread{ process.getOutputStream() map {IO.pipeStream(inputStream,_)} },
-                    startThread{ process.getInputStream() map {IO.pipeStream(_,outputStream)} },
+                    startThread{ use(process.getOutputStream()) map {IO.pipeStream(inputStream,_)} },
+                    startThread{ use(process.getInputStream()) map {IO.pipeStream(_,outputStream)} },
                     startThread{
                     var duration = 1.0
-                    for(error <- process.getErrorStream();line <- Source.fromInputStream(error).getLines)
+                    for(error <- use(process.getErrorStream());line <- Source.fromInputStream(error).getLines)
                       if(line contains "Duration")
                         duration =  Time.parseDuration(line.dropWhile(_!=':').drop(1).takeWhile(_!=',').trim)
                       else if(line contains "time=")

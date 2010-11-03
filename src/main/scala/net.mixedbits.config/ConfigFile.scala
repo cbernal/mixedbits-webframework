@@ -26,7 +26,7 @@ class ConfigFile(defaultFile:File,alternateFiles:File*) extends ValNameProvider 
       yield loadProperties(file)
   
   private def loadProperties(file:File) =
-    for(reader <- new FileReader(file))
+    for(reader <- use(new FileReader(file)))
       yield {
         val props = new Properties
         props.load(reader)

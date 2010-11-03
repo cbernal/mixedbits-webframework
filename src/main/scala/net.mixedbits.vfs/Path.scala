@@ -17,16 +17,16 @@ trait Path extends Comparable[Path]{
   def mkdir():Unit
   
   def copyTo(dest:OutputStream):Unit =
-    for(source <- openRead)
+    for(source <- use(openRead))
       IO.pipeStream(source,dest)
   
   def copyTo(dest:File):Unit = 
-    for(output <- new FileOutputStream(dest))
+    for(output <- use(new FileOutputStream(dest)))
       copyTo(output)
   
   def copyTo(dest:Path):Unit = 
     if(!dest.exists)
-      for(output <- dest.openWrite)
+      for(output <- use(dest.openWrite))
         copyTo(output)
     else
       error("destination path already exists!")

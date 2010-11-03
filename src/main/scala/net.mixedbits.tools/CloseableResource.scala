@@ -3,7 +3,7 @@ package net.mixedbits.tools
 import Sequences._
 import java.io._
 
-class CloseableResource[T](resource: =>T,onClose: T=>Unit){
+class CloseableResource[T](resource: =>T)(implicit onClose: HasClose[T]){
   
   def foreach(f: T=>Unit) = map(f)
   
@@ -15,7 +15,7 @@ class CloseableResource[T](resource: =>T,onClose: T=>Unit){
     finally{
       try{
         if(r!=null)
-          onClose(r)
+          onClose.close(r)
       }
       catch{
         case e =>
@@ -30,21 +30,35 @@ object CloseableResource extends CloseableResourceImports{
   private def usageTest(){
     
     //uses the javaCloseableToCloseableResource conversion
-    for(input <- new BufferedReader(new FileReader("/tmp/input.txt"));output <- new FileWriter("/tmp/output.txt") ){
+    for(input <- use(new BufferedReader(new FileReader("/tmp/input.txt")));output <- use(new FileWriter("/tmp/output.txt")) ){
       output.write(input.readLine)
     }
     
+    
+    
     //uses the looksCloseableToCloseableResource conversion
-    for(zipFile <- new java.util.zip.ZipFile("/tmp/bla.zip");entry <- zipFile.entries){
+    for(zipFile <- use(new java.util.zip.ZipFile("/tmp/bla.zip"));entry <- zipFile.entries){
       println(entry.getName)
     }
   }
 }
+
+trait HasClose[T]{
+  def close(obj:T)
+}
+object HasClose{
+  implicit def javaIoCloseable[T <: java.io.Closeable] = new HasClose[T]{
+    def close(obj:T) = obj.close
+  }
+  
+  implicit def looksCloseableToHasClose[T <: {def close():Any}] = new HasClose[T]{
+    def close(obj:T) = obj.close
+  }
+}
+
 trait CloseableResourceImports{
   
-  implicit def looksCloseableToCloseableResource[T <: {def close():Unit}](resource:T):CloseableResource[T] = 
-    new CloseableResource[T](resource,{_.close})
+  def use[T:HasClose](resource:T):CloseableResource[T] = 
+    new CloseableResource[T](resource)
 
-  implicit def javaCloseableToCloseableResource[T <: java.io.Closeable](resource:T):CloseableResource[T] = 
-    new CloseableResource[T](resource,{_.close})
 }
