@@ -172,4 +172,21 @@ trait WebApplication extends Filter{
   }
 }
 
+abstract class WebServlet extends HttpServlet{
+  page: WebResponse =>
+  override def service(httpRequest:HttpServletRequest,httpResponse:HttpServletResponse){
+    val path = java.net.URLDecoder.decode(httpRequest.getRequestURI,Option(httpRequest.getCharacterEncoding) getOrElse "UTF-8")
+    WebRequest.requestContext.withValue( (null,getServletContext,httpRequest,httpResponse) ){
+      WebRequest.webPath.withValue(WebPathMatch(path)) {
+        try{
+          page.runBeforeActions()
+          page.processRequest()
+        }
+        finally{
+          page.runAfterActions()
+        }
+      }
+    }
+  }
+}
 
