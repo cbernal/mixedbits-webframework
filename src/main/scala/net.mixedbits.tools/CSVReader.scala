@@ -11,15 +11,15 @@ class CSVReader(reader:Reader,headers:Array[String] = null,preferences:CSVPrefer
   def iterator = new Iterator[Map[String,String]]{
     val headers = Option(csv.headers) getOrElse csvReader.readNext()
     var current:Array[String] = null
-    def hasNext() = {
+    def hasNext():Boolean = {
       current = csvReader.readNext()
-      current.size match {
-        case x if x == headers.size =>
-          true
-        case _ =>
-          close()
-          false
+      
+      if(current == null || current.size != headers.size){
+        close()
+        return false
       }
+      
+      return true
     }
     def next() = Map(headers zip current:_*)
   }
