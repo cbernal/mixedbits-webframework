@@ -188,6 +188,16 @@ class ExtendedFile(path:String) extends java.io.File(path){
   def createParents() = {parent.mkdirs();this}
   def createFolders() = {mkdirs();this}
   
+  def extension = getName match {
+    case name if name contains "." => name.substring(name.lastIndexOf(".")+1,name.size)
+    case _ => ""
+  }
+
+  def simpleName = getName match {
+    case name if name contains "." => name.substring(0,name.lastIndexOf("."))
+    case name => name
+  }
+  
   def readAllText(encoding:String = "UTF-8") = 
     Files.readAllText(this,encoding)
 }
