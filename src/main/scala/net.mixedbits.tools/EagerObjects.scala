@@ -5,26 +5,23 @@ import java.lang.reflect.{Array => ReflectionArray,_}
 trait EagerObjects{
   self =>
   
-  private def objectInitializers(clazz:Class[_]):Array[Method] = {
-    val className = clazz.getName
+  private def objectInitializers(clazz:Class[_]):Array[Method] = 
     for{
       method <- clazz.getMethods
       returnType = method.getReturnType
+      className = clazz.getName
       if method.getParameterTypes.size == 0
       if Modifier.isFinal(method.getModifiers)
       if returnType.getName startsWith className
       if returnType.getName endsWith "$"
       if returnType.getName contains method.getName
     } yield method
-  }
   
-  private def initializeObjects(instance:Any,clazz:Class[_]):Unit = 
-    for(method <- objectInitializers(clazz)){
-      val obj = method.invoke(instance)
-      initializeObjects(obj,obj.getClass)
-    }
-  
-  protected def initializeObjects:Unit = initializeObjects(self,self.getClass)
+  protected def initializeObjects(instance:AnyRef = self):Unit = 
+    for{
+      method <- objectInitializers(instance.getClass)
+      obj = method.invoke(instance)
+    } initializeObjects(obj)
 }
 
 
@@ -42,13 +39,13 @@ object EagerObjects{
     }
     class Clazz{
       clazzOk = false
-    }                        
+    }
     final def Clazz = {
       println("Clazz called...")
       new Clazz
     }
     
-    initializeObjects
+    initializeObjects()
     
     if(!(objOk && innerOk && clazzOk))
       error("eager initialization error!")
@@ -65,4 +62,3 @@ object EagerObjects{
     new E()
   }
 }
-
