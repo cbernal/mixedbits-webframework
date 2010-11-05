@@ -1,6 +1,7 @@
 package net.mixedbits.webframework
 
 import javax.servlet.http._
+import java.io._
 
 import scala.xml._
 
@@ -24,6 +25,26 @@ trait TextResponse extends WebResponse{
     response.getWriter.write(content)
   }
   
+}
+
+trait TextResponseWriter extends WebResponse{
+  //tuple containing contentType and responseBody
+  def get:(String,PrintWriter => Any)
+  def post:(String,PrintWriter => Any)
+  
+  def processRequest{
+    writeContent(WebRequest.httpResponse)
+  }
+  
+  protected def writeContent(response:HttpServletResponse){
+    val (contentType,handler) = httpRequestMethod match {
+      case "POST" => post
+      case _ => get
+    }
+    
+    response.setContentType(contentType)
+    handler(response.getWriter)
+  }
 }
 
 trait GZipSupport extends TextResponse{
