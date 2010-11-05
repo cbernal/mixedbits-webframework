@@ -27,16 +27,19 @@ trait BinaryResponse extends WebResponse{
 trait SimpleBinaryResponse extends WebResponse{
   import java.io.InputStream
   
-  case class BinaryResponse(contentType:Option[String],contentLength:Option[Int],stream:InputStream)
+  case class BinaryResponse(contentType:Option[String],fileName:Option[String],contentLength:Option[Int],stream:InputStream)
   
   implicit def tupleToBinaryResponseData(tuple:(String,InputStream)):BinaryResponse = tuple match {
-    case (contentType,stream) => BinaryResponse(Some(contentType),None,stream)
+    case (contentType,stream) => BinaryResponse(Some(contentType),None,None,stream)
   }
   implicit def tupleToBinaryResponseData(tuple:(String,Int,InputStream)):BinaryResponse = tuple match {
-    case (contentType,contentLength,stream) => BinaryResponse(Some(contentType),Some(contentLength),stream)
+    case (contentType,contentLength,stream) => BinaryResponse(Some(contentType),None,Some(contentLength),stream)
   }
-  implicit def toBinaryResponse(stream:InputStream):BinaryResponse =
-    BinaryResponse(None,None,stream)
+  implicit def tupleToBinaryResponseData(tuple:(String,String,Int,InputStream)):BinaryResponse = tuple match {
+    case (contentType,fileName,contentLength,stream) => BinaryResponse(Some(contentType),Some(fileName),Some(contentLength),stream)
+  }  
+  
+  implicit def toBinaryResponse(stream:InputStream):BinaryResponse = BinaryResponse(None,None,None,stream)
   
   def data:BinaryResponse
   
@@ -48,6 +51,8 @@ trait SimpleBinaryResponse extends WebResponse{
     
     WebRequest.httpResponse.setContentType(response.contentType getOrElse "application/octet-stream")
     
+    for(value <- response.fileName)
+      WebRequest.httpResponse.setHeader("Content-Disposition","attachment;filename=\""+value+"\";")
     for(value <- response.contentLength)
       WebRequest.httpResponse.setContentLength(value)
     
