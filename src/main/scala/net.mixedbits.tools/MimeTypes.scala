@@ -1,9 +1,7 @@
 package net.mixedbits.tools
 
 object MimeTypes{
-  //mime
-  def getContentTypeForName(name:String):String = getContentTypeForName(name,true)
-  def getContentTypeForName(name:String,allowExecutableTypes:Boolean) = name.substring(name.lastIndexOf(".")).toLowerCase match{
+  def getContentTypeForName(name:String,allowExecutableTypes:Boolean = true) = name.substring(name.lastIndexOf(".")).toLowerCase match{
     case ".html" => "text/html"
     case ".htm" => "text/html"
     case ".txt" => "text/plain"
