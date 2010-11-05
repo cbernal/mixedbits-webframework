@@ -1,6 +1,7 @@
 package net.mixedbits.webframework
 
 import scala.xml._
+import net.mixedbits.tools._
 
 abstract class IncludeFile{
   def elements:Elements
@@ -69,7 +70,7 @@ trait WebPage extends TextResponse{
   def xmlns = "http://www.w3.org/1999/xhtml"
   
   def html = 
-    docType+"\n"+Xhtml.toXhtml(
+    docType+"\n"+ToXhtml(
       <html xmlns={xmlns} lang={lang} xml:lang={lang}>
         <head>
           <title>{title}</title>
