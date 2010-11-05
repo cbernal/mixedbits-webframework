@@ -1,4 +1,4 @@
-package net.mixedbits.xmlstore
+package net.mixedbits.tools
 
 import com.thoughtworks.xstream.converters._  
 import com.thoughtworks.xstream.converters.collections._  
@@ -6,7 +6,7 @@ import com.thoughtworks.xstream._
 import com.thoughtworks.xstream.mapper._  
 import com.thoughtworks.xstream.io._  
   
-class ListConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapper) {
+class XStreamListConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapper) {
   def canConvert( clazz: Class[_]) = {
     // "::" is the name of the list class, also handle nil
     classOf[::[_]] == clazz || Nil.getClass == clazz  
@@ -32,7 +32,7 @@ class ListConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_map
 }
 
 import scala.collection.mutable.ListBuffer
-class SeqConverter[T <: Seq[Any]](fromSeq: Seq[Any] => T)(implicit manifest:ClassManifest[T],_mapper:Mapper) extends AbstractCollectionConverter(_mapper) {
+class XStreamSeqConverter[T <: Seq[Any]](fromSeq: Seq[Any] => T)(implicit manifest:ClassManifest[T],_mapper:Mapper) extends AbstractCollectionConverter(_mapper) {
   val seqClass = manifest.erasure
   def canConvert( clazz: Class[_]) = {
     seqClass == clazz
@@ -57,7 +57,7 @@ class SeqConverter[T <: Seq[Any]](fromSeq: Seq[Any] => T)(implicit manifest:Clas
   }
 }
 
-class TupleConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapper) {
+class XStreamTupleConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_mapper) {
   
   def canConvert( clazz: Class[_]) = {
     clazz.getName.startsWith("scala.Tuple")
@@ -88,7 +88,7 @@ class TupleConverter( _mapper : Mapper ) extends AbstractCollectionConverter(_ma
 }
 
 
-class SymbolConverter extends SingleValueConverter {
+class XStreamSymbolConverter extends SingleValueConverter {
   def toString(value:Any) = 
     value.asInstanceOf[Symbol].name
 
@@ -99,35 +99,41 @@ class SymbolConverter extends SingleValueConverter {
     classOf[Symbol] == clazz
 }
   
-object ScalaConversions {
+object XStreamConversions {
+  private lazy val jsonConverter = XStreamConversions(new XStream(new com.thoughtworks.xstream.io.json.JettisonMappedXmlDriver()))
+  def toJson(item:AnyRef) = jsonConverter.toXML(item)
+
+  private lazy val xmlConverter = XStreamConversions(new XStream())
+  def toXml(item:AnyRef) = xmlConverter.toXML(item)
+  
   def apply( stream: XStream ):XStream = {
     implicit val mapper = stream.getMapper
     
     //list
     stream.alias("list", classOf[::[_]])
     stream.alias("list", Nil.getClass)
-    stream.registerConverter( new ListConverter(stream.getMapper) )
+    stream.registerConverter( new XStreamListConverter(stream.getMapper) )
     
     //tuples
     for(i <- 1 to 22) stream.alias("tuple",Class.forName("scala.Tuple"+i))  
-    stream.registerConverter( new TupleConverter(stream.getMapper) )
+    stream.registerConverter( new XStreamTupleConverter(stream.getMapper) )
   
     //symbols
     stream.alias("symbol", classOf[Symbol])
-    stream.registerConverter( new SymbolConverter() )
+    stream.registerConverter( new XStreamSymbolConverter() )
 
     //various seq implementations    
     stream.alias("arrayBuffer",classOf[scala.collection.mutable.ArrayBuffer[_]])
-    stream.registerConverter(new SeqConverter[scala.collection.mutable.ArrayBuffer[Any]](x => new scala.collection.mutable.ArrayBuffer[Any] ++= x))
+    stream.registerConverter(new XStreamSeqConverter[scala.collection.mutable.ArrayBuffer[Any]](x => new scala.collection.mutable.ArrayBuffer[Any] ++= x))
     
     stream.alias("listBuffer",classOf[scala.collection.mutable.ListBuffer[_]])
-    stream.registerConverter(new SeqConverter[scala.collection.mutable.ListBuffer[Any]](x => new scala.collection.mutable.ListBuffer[Any] ++= x))
+    stream.registerConverter(new XStreamSeqConverter[scala.collection.mutable.ListBuffer[Any]](x => new scala.collection.mutable.ListBuffer[Any] ++= x))
     
     stream
   }
   
   def test(){
-    implicit val stream = ScalaConversions(new XStream)
+    implicit val stream = XStreamConversions(new XStream)
     testType(new scala.collection.mutable.ArrayBuffer[Int] ++= List(1,2,3))
     testType(new scala.collection.mutable.ListBuffer[Int] ++= List(1,2,3))
   }
