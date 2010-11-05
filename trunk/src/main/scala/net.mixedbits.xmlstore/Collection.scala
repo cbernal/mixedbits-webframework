@@ -28,7 +28,7 @@ object XmlConverter{
   }
   implicit def xstreamConverter[T <: AnyRef](implicit manifest:ClassManifest[T]) = new XmlConverter[T]{
     private lazy val xstream = {
-      val x = ScalaConversions(new XStream())
+      val x = XStreamConversions(new XStream())
       x.setMode(XStream.NO_REFERENCES)
       
       def findInterestingType(clazz:Class[_]):List[Class[_]] = {
