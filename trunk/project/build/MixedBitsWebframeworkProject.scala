@@ -27,7 +27,7 @@ class MixedBitsWebframeworkProject(info: ProjectInfo) extends DefaultProject(inf
     "com.thoughtworks.xstream" % "xstream" % "1.3.1",
     "com.h2database" % "h2" % "1.2.140",
     "org.codehaus.jettison" % "jettison" % "1.2",
-    "mongodb" % "mongodb" % "2.1" from "http://github.com/downloads/mongodb/mongo-java-driver/mongo-2.1.jar",
+    "org.mongodb" % "mongo-java-driver" % "2.3",
     "net.sf.opencsv" % "opencsv" % "2.0"
   )
   
