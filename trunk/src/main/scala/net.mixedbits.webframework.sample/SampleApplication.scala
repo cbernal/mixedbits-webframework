@@ -8,10 +8,16 @@ object SampleApplication extends WebApplication{
   
   paths{
     case Path() => HomePage 
-    case Path("products") => ProductPage 
+    case Path("products") => ProductPage
+    case Path("products","search",path @ _*) => search(path)
     case Path("products",id) => ProductEntryPage(id) 
     case Path("blog") => BlogPage 
-    case Path("blog",id) => BlogEntryPage(id) 
+    case Path("blog",id) => BlogEntryPage(id)
+  }
+  
+  val search = subpaths{
+    case "criteria" => HomePage
+    case keyword => notFoundPage
   }
 
   val notFoundPage = NotFoundPage  
