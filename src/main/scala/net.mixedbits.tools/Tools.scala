@@ -119,8 +119,11 @@ object Files extends FilesImports{
     }
   }
   
-  def readAllText(file:File,encoding:String = "UTF-8"):String =
+  def readAllText(file:File,encoding:String = IO.defaultTextEncoding):String =
     for(stream <- use(new FileInputStream(file))) yield IO.readAllText(stream,encoding)
+    
+  def writeAllText(file:File,text:String,encoding:String = IO.defaultTextEncoding):Unit = 
+    for(stream <- use(new FileOutputStream(file))) IO.writeAllText(stream,text,encoding)
   
   def userPath(start:String,remaining:String*):File = path(new File(System.getProperty("user.home"),start),remaining:_*)
   def path(start:String,remaining:String*):File = path(new File(start),remaining:_*)
@@ -198,8 +201,11 @@ class ExtendedFile(path:String) extends java.io.File(path){
     case name => name
   }
   
-  def readAllText(encoding:String = "UTF-8") = 
+  def readAllText(encoding:String = IO.defaultTextEncoding) = 
     Files.readAllText(this,encoding)
+  
+  def writeAllText(text:String, encoding:String = IO.defaultTextEncoding) = 
+    Files.writeAllText(this,text,encoding)
 }
 
 object Network extends NetworkImports
@@ -275,7 +281,7 @@ trait BlockStatementsImports{
   
   def printDuration[T](f: =>T):T = printDuration(""){f}
   def printDuration[T](description:String)(f: =>T):T = {
-    val desc = if(description != "") " '"+description else ""
+    val desc = if(description != "") " '"+description+"'" else ""
     println("starting"+desc )
     val start = System.currentTimeMillis
     try{
@@ -471,25 +477,17 @@ trait IOImports{
     val input = new PipedInputStream
     val output = new PipedOutputStream(input)
     startThread{
-      try{
-        func(output)
-      }
-      finally{
-        output.close
-      }
+      try{ func(output) }
+      finally{ output.close }
     }
     input
   }
   
   val defaultBufferSize = 1024*16 // 16k
   
-  def using[T <: Closeable,R](closeable:T)(body: T=>R):R = {
+  def using[T <: Closeable,R](closeable:T)(body: T=>R):R = 
     try{ body(closeable) }
-    finally{
-      if(closeable!=null)
-        closeable.close()
-    }
-  }
+    finally{ if(closeable!=null) closeable.close() }
   
   def pipeStream(inputStream:InputStream,outputStream:OutputStream):Unit = 
     pipeStream(inputStream,outputStream,defaultBufferSize)
@@ -504,11 +502,17 @@ trait IOImports{
     }
   }
   
-  def readAllText(inputStream:InputStream,encoding:String = "UTF-8"):String = {
+  def readAllText(inputStream:InputStream,encoding:String = IO.defaultTextEncoding):String = {
     val outputStream = new ByteArrayOutputStream
     pipeStream(inputStream,outputStream)
     outputStream.toString(encoding)
   }
+  
+  def writeAllText(outputStream:OutputStream,text:String,encoding:String = IO.defaultTextEncoding){
+    outputStream.write(text.getBytes(encoding))
+  }
+  
+  def defaultTextEncoding = "UTF-8"
 }
 
 object Hash extends HashImports
