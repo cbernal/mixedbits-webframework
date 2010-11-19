@@ -1,9 +1,10 @@
 package net.mixedbits.media
 
 import java.io._
+import net.mixedbits.tools._
 
-case class Track(index:Int,startSector:Long,duration:Double)
-case class Disc(cdIndexId:String,cddbId:Long,duration:Double,tracks:Seq[Track])
+case class RawTrack(index:Int,startSector:Long,duration:Double)
+case class RawDisc(cdIndexId:String,cddbId:Long,duration:Double,tracks:Seq[RawTrack])
 
 object Cdda2wav{
   
@@ -48,7 +49,7 @@ object Cdda2wav{
     var cdIndexId:String = null
     var cddbId:Long = 0
     var duration:Double = 0
-    var tracks = new scala.collection.mutable.ArrayBuffer[Track]()
+    var tracks = new ArrayBuffer[RawTrack]()
     
     val process = new ProcessReader("cdda2wav","-no-write","-gui",currentDevice,"-info-only","-v","toc,sectors")
     for(line <- process.output; val segments = line split "\\s+")
@@ -59,18 +60,16 @@ object Cdda2wav{
       else if(line startsWith "Tracks:")
         duration = Time.parseDuration(segments drop 1 head)
       else if(segments(0).startsWith("T") && segments(0).endsWith(":") && segments.size == 3)
-        tracks += Track(
+        tracks += RawTrack(
                     (segments(0) drop 1 dropWhile {_ == '0'} takeWhile {_ != ':'}).toInt,
                     segments(1).toLong,
                     Time.parseDuration(segments(2))
                     )
       
-    //DiscMetadata(
-      Disc(cdIndexId,cddbId,duration,tracks)
-    //  )
+    RawDisc(cdIndexId,cddbId,duration,tracks)
   }
   
-  def discMetadata() =  
+  def discMetadata() = 
     CDDB(discInfo)
   
   def ripTrack(index:Int,file:File,progress: Double=>Unit):Boolean = {

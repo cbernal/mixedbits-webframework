@@ -1,9 +1,6 @@
 package net.mixedbits.media
 
-case class DiscMetadata(info:Disc,tracks:Seq[TrackMetadata])
-case class TrackMetadata(number:String,title:String,year:String,genre:String,artist:String,album:String,albumArtist:String)
-
-object CDDB extends (Disc => Seq[DiscMetadata]){
+object CDDB extends (RawDisc => Seq[DiscResponse]){
   
   private def runCommand(cmd:String) = new Iterator[String]{
     val reader = new java.io.BufferedReader(
@@ -18,7 +15,7 @@ object CDDB extends (Disc => Seq[DiscMetadata]){
     def hasNext = {currentLine = reader.readLine;currentLine!=null}
   }.toList
   
-  def apply(info:Disc):List[DiscMetadata] = {
+  def apply(info:RawDisc):List[DiscResponse] = {
     import info._
     val cddbDiscId = java.lang.Long.toString(cddbId,16)
     
@@ -29,12 +26,12 @@ object CDDB extends (Disc => Seq[DiscMetadata]){
         tail takeWhile {_!="."} map {readAlbum(info,_)}
       case _ =>
         Nil
-    } 
+    }
   }
   
   def debug(s:String) = () 
   
-  def readAlbum(info:Disc,line:String) = {
+  def readAlbum(info:RawDisc,line:String) = {
     var genre = line takeWhile {_!=' '}
     val id = line drop genre.size+1 takeWhile {_!=' '}
     val remainder = line drop genre.size+id.size+2
@@ -72,7 +69,11 @@ object CDDB extends (Disc => Seq[DiscMetadata]){
         println("no entry found")
     }
       
-    DiscMetadata(info,tracks.toList map {case (number,title) => TrackMetadata(number,title,year,genre,artist.trim,album.trim,null)})
+    DiscResponse(
+      info,
+      for( ((number,title),rawTrack) <- tracks.toList.zip(info.tracks))
+        yield TrackResponse(number.toInt+1,title,year,genre,artist.trim,album.trim,null,rawTrack.duration)
+    )
   }
 
     /*
