@@ -9,4 +9,8 @@ package object tools
   with ObjectsImports
   with BlockStatementsImports
   with CloseableResourceImports
-  with XmlImports
+  with XmlImports{
+    
+  type ListBuffer[A] = scala.collection.mutable.ListBuffer[A]
+  type ArrayBuffer[A] = scala.collection.mutable.ArrayBuffer[A] 
+}
