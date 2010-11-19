@@ -2,8 +2,6 @@ package net.mixedbits.webframework
 
 import javax.servlet._
 import javax.servlet.http._
-import scala.collection.mutable._
-
 import net.mixedbits.tools._
 
 class WebApplicationLoader extends Filter{
@@ -32,13 +30,12 @@ trait WebApplication extends Filter{
   
   def paths(matcher:PathMatcher) = pathsList ::= matcher
   
-  private var context:ServletContext = null
-  def init(config:FilterConfig){
-    context = config.getServletContext
-  }
+  def subpaths(matcher:PathMatcher) = {pathParts:Seq[String] => matcher(pathParts mkString "/")}
   
-  def destroy{
-  }
+  private var context:ServletContext = null
+  def init(config:FilterConfig){ context = config.getServletContext }
+  
+  def destroy{}
   
   def requestWrapper(request:HttpServletRequest):HttpServletRequest = request
   //def requestWrapper(request:HttpServletRequest):HttpServletRequest = {
@@ -76,7 +73,7 @@ trait WebApplication extends Filter{
     
     WebRequest.requestContext.withValue( (this,context,httpRequest,httpResponse) ){
       
-      try{
+      try {
         
         findPage(path) match {
           case Some(webPage) => return showPage(webPage,path)
@@ -87,8 +84,7 @@ trait WebApplication extends Filter{
         if(!new java.io.File(context.getRealPath(path)).exists)
           return showPage(notFoundPage,path)
         
-      }
-      catch{
+      } catch {
         //this stops our custom 404 from intercepting other servlets / filters, etc
         case e if e == WebResponseContinueJ2EEProcessing => ()
       }
@@ -100,7 +96,7 @@ trait WebApplication extends Filter{
   
   object Path{
     def unapplySeq(path:String):Option[Seq[String]] = 
-      Some(path split '/' drop 1)
+      Some(path split '/' dropWhile {_ == ""})
   }
   
   def findPage(path:String):Option[WebResponse] = {
@@ -110,10 +106,9 @@ trait WebApplication extends Filter{
     
     //try to execute the handler, and process the exception in case there is an error
     // this allows for normal page processing to occur during the matcher function
-    try{
+    try {
       result map { _(path) }
-    }
-    catch{
+    } catch {
       case e => 
         processException(e,path)
         None
@@ -122,14 +117,12 @@ trait WebApplication extends Filter{
   
   private def showPage(page:WebResponse,path:String){
     WebRequest.webPath.withValue(WebPathMatch(path)) {
-      try{
+      try {
         page.runBeforeActions()
         page.processRequest()
-      }
-      catch{
+      } catch {
         case e => processException(e,path)
-      }
-      finally{
+      } finally {
         page.runAfterActions()
       }
     }
@@ -181,8 +174,7 @@ abstract class WebServlet extends HttpServlet{
         try{
           page.runBeforeActions()
           page.processRequest()
-        }
-        finally{
+        } finally {
           page.runAfterActions()
         }
       }
