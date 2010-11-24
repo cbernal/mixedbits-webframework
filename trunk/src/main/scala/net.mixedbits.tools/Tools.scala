@@ -231,7 +231,14 @@ trait ExceptionsImports{
 }
 
 object Objects extends ObjectsImports{
-  def classNameParts(name:String) = name.split('$').flatMap(_ split '.').filter{_!=""}
+  def classNameParts(name:String,removeConsoleObjectParts:Boolean = true) = {
+    val result = name.split('$').flatMap(_ split '.').filter{_!=""}
+    
+    if(removeConsoleObjectParts && result.drop(3).takeWhile(_ == "iw").size > 3)
+      result.drop(3).dropWhile(_ == "iw")
+    else
+      result
+  }
   
   def objectPath(o:AnyRef) = classNameParts(o.getClass.getSimpleName)
   def simpleClassName(o:AnyRef) = objectPath(o) mkString "."
