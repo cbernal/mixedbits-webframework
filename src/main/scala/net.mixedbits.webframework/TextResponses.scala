@@ -5,15 +5,18 @@ import java.io._
 
 import scala.xml._
 
-trait TextResponse extends WebResponse{
+trait BaseTextResponse extends WebResponse{
+  def processRequest{    
+    writeContent(WebRequest.httpResponse)
+  }
+  protected def writeContent(response:HttpServletResponse)
+}
+
+trait TextResponse extends BaseTextResponse{
   
   //tuple containing contentType and responseBody
   def get:(String,String)
   def post:(String,String)
-  
-  def processRequest{    
-    writeContent(WebRequest.httpResponse)
-  }
   
   protected def writeContent(response:HttpServletResponse){
     val (contentType,content) = httpRequestMethod match {
@@ -27,14 +30,10 @@ trait TextResponse extends WebResponse{
   
 }
 
-trait TextResponseWriter extends WebResponse{
+trait TextResponseWriter extends BaseTextResponse{
   //tuple containing contentType and responseBody
   def get:(String,PrintWriter => Any)
   def post:(String,PrintWriter => Any)
-  
-  def processRequest{
-    writeContent(WebRequest.httpResponse)
-  }
   
   protected def writeContent(response:HttpServletResponse){
     val (contentType,handler) = httpRequestMethod match {
@@ -47,7 +46,7 @@ trait TextResponseWriter extends WebResponse{
   }
 }
 
-trait GZipSupport extends TextResponse{
+trait GZipSupport extends BaseTextResponse{
   
   override def processRequest{
     
