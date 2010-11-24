@@ -6,9 +6,7 @@ import java.io._
 import scala.xml._
 
 trait BaseTextResponse extends WebResponse{
-  def processRequest{    
-    writeContent(WebRequest.httpResponse)
-  }
+  def processRequest{ writeContent(WebRequest.httpResponse) }
   protected def writeContent(response:HttpServletResponse)
 }
 
