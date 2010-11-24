@@ -4,14 +4,21 @@ package net.mixedbits.webframework
 trait BinaryResponse extends WebResponse{
   import java.io.InputStream
   
-  //tuple containing contentType and responseBody
   def contentType:String
+  def contentLength:Option[Int] = None
+  def fileName:Option[String] = None
   
   def processRequest(outputStream:java.io.OutputStream):Unit
   
   def processRequest{
    
     WebRequest.httpResponse.setContentType(contentType)
+    
+    for(value <- fileName)
+      WebRequest.httpResponse.setHeader("Content-Disposition","attachment;filename=\""+value+"\";")
+    for(value <- contentLength)
+      WebRequest.httpResponse.setContentLength(value)
+    
     val outputStream = WebRequest.httpResponse.getOutputStream
     try{
       processRequest(outputStream)
