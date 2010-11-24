@@ -207,8 +207,8 @@ trait DataObject{
   sealed abstract class Property[T:DataValue]{
     property =>
     
-    lazy val propertyName:String = Objects.simpleClassName(this)
-    lazy val propertyPath = propertyName.split('.').dropWhile(_!=dataObject.className).drop(1)
+    lazy val propertyName:String = Objects.simpleClassName(property)
+    lazy val propertyPath = propertyName.split('.').drop(1)
     def parentPath:Array[String] = propertyPath.take(propertyPath.length-1)
     def shortName:String = propertyPath.last
     
