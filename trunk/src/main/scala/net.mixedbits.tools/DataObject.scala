@@ -177,6 +177,9 @@ trait DataObject{
   def convertTo[T:DataFormat] = 
     implicitly[DataFormat[T]].encode(jsonData)
   
+  def as[T <: DataObject:ClassManifest] = 
+    DataObject.newInstance[T].loadJsonData(jsonData)
+  
   def toJson = dataObject.toString
   
   def toBson = BSON.encode(dataObject.jsonData)
