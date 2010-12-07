@@ -29,18 +29,24 @@ object ffmpeg{
     progress(1.0)
     ConversionResult(process.waitFor,percentComplete,lines)
   }
-  def convertStream(inputStream:InputStream,inputParams:String*)
-                   (outputStream:OutputStream,outputParams:String*)
-                   (progress:Double=>Unit = x => (),debug:String => Unit = x => ()):ConversionResult = {
+  def convertStream(inputStream:InputStream,inputParams:String*)(outputStream:OutputStream,outputParams:String*) = new {
+    def apply() = internalConvertStream(inputStream,inputParams,outputStream,outputParams,x=>(),x=>())
+    def apply(progress:Double=>Unit) = internalConvertStream(inputStream,inputParams,outputStream,outputParams,progress,x=>())
+    def apply(progress:Double=>Unit,debug:String=>Unit) = internalConvertStream(inputStream,inputParams,outputStream,outputParams,progress,debug)
+  }
+  private def internalConvertStream(inputStream:InputStream,inputParams:Seq[String],outputStream:OutputStream,outputParams:Seq[String],progress:Double=>Unit,debug:String=>Unit):ConversionResult = {
     val process = new ProcessBuilder(List("ffmpeg") ++ inputParams ++ List("-i","-") ++ outputParams ++ List("-") : _*).start()
     handleProgress(process,progress,debug,
       startThread{ use(process.getOutputStream()) foreach {IO.pipeStream(inputStream,_)} },
       startThread{ use(process.getInputStream()) foreach {IO.pipeStream(_,outputStream)} }
     )
   }
-  def convertFile(inFile:File,inputParams:String*)
-                 (outputStream:OutputStream,outputParams:String*)
-                 (progress:Double=>Unit = x =>(),debug:String => Unit = x => ()):ConversionResult = {
+  def convertFile(inFile:File,inputParams:String*)(outputStream:OutputStream,outputParams:String*) = new {
+    def apply() = internalConvertFile(inFile,inputParams,outputStream,outputParams,x=>(),x=>())
+    def apply(progress:Double=>Unit) = internalConvertFile(inFile,inputParams,outputStream,outputParams,progress,x=>())
+    def apply(progress:Double=>Unit,debug:String=>Unit) = internalConvertFile(inFile,inputParams,outputStream,outputParams,progress,debug)
+  }                 
+  private def internalConvertFile(inFile:File,inputParams:Seq[String],outputStream:OutputStream,outputParams:Seq[String],progress:Double=>Unit,debug:String=>Unit):ConversionResult = {
     val process = new ProcessBuilder(List("ffmpeg") ++ inputParams ++ List("-i",inFile.getAbsolutePath) ++ outputParams ++ List("-") : _*).start()
     handleProgress(process,progress,debug,startThread{ use(process.getInputStream()) foreach {IO.pipeStream(_,outputStream)} })
   }
