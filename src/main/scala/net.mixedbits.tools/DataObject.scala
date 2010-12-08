@@ -174,6 +174,8 @@ trait DataObject{
   private val className = Objects.classNameParts(getClass.getName).last
   def tagName = className
   
+  def tag = get[String](jsonData,"#") getOrElse tagName
+  
   def convertTo[T:DataFormat] = 
     implicitly[DataFormat[T]].encode(jsonData)
   
