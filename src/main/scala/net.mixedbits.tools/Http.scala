@@ -274,7 +274,7 @@ class HttpResponse private[tools](method:HttpMethod,bufferResponse:Boolean){
   def responseCode = method.getStatusCode
   def responseMessage = method.getStatusLine.getReasonPhrase
   
-  def header(header:String) = method.getResponseHeader(header).getValue
+  def header(header:String) = Option(method.getResponseHeader(header)) map {_.getValue} getOrElse null
   
   def contentType:String = {
     val contentType = header(Http.ContentType)
