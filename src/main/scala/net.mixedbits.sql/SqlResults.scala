@@ -13,10 +13,10 @@ class SqlResult(resultSet:ResultSet){
       yield (metadata.getColumnName(i),resultSet.getObject(i))
     ) mkString ("SqlResult(",", ",")")
   }
-    
+
 }
 
-class SqlInsert(resultSet:ResultSet){
+class SqlInsert(val resultSet:ResultSet){
   def update[T:SqlMappedColumnType](column:Symbol,value:T) = 
     implicitly[SqlMappedColumnType[T]].write(resultSet,column.name,value)
 }

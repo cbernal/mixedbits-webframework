@@ -44,9 +44,12 @@ class DefaultValues(val items:DefaultValue[_ <: Any]*){
 object DefaultValues{
   implicit val defaultValues = new DefaultValues(
         DefaultValue[Boolean](false,true),
+        DefaultValue[Byte](0:Byte,1:Byte),
         DefaultValue[Short](0,1),
         DefaultValue[Int](0,1),
         DefaultValue[Long](0,1),
+        DefaultValue[Float](0.0f,1.0f),
+        DefaultValue[Double](0.0,1.0),
         DefaultValue[String](null,"string"),
         DefaultValue[Option[_]](None,Some(null))
       )
@@ -332,6 +335,7 @@ class SqlCollection[T <: Product : ClassManifest,P:PrimaryKey](val tableName:Str
   protected def updateValue(row:SqlInsert,fieldName:String,value:Any) = {
     val fieldSymbol = Symbol(fieldName)
     value match {
+      case null => row.resultSet.updateNull(fieldName)
       case v:Boolean => row(fieldSymbol) = v
       case v:Byte => row(fieldSymbol) = v
       case v:Short => row(fieldSymbol) = v
