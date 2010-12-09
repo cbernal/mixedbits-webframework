@@ -162,7 +162,7 @@ trait WebApplication extends Filter{
       onError(e,path,response)
   }
   
-  def onError(exception:Throwable,path:String,response:Option[WebResponse]) = {
+  def onError(exception:Throwable,path:String,response:Option[WebResponse]){
     println("Unknown exception in WebApplication")
     exception.printStackTrace
     throw exception
