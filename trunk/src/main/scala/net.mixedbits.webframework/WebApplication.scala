@@ -110,7 +110,7 @@ trait WebApplication extends Filter{
       result map { _(path) }
     } catch {
       case e => 
-        processException(e,path)
+        processException(e,path,None)
         None
     }
   }
@@ -121,14 +121,14 @@ trait WebApplication extends Filter{
         page.runBeforeActions()
         page.processRequest()
       } catch {
-        case e => processException(e,path)
+        case e => processException(e,path,Some(page))
       } finally {
         page.runAfterActions()
       }
     }
   }
   
-  private def processException(exception:Throwable,path:String):Unit = exception match {
+  private def processException(exception:Throwable,path:String,response:Option[WebResponse]):Unit = exception match {
     case WebResponseRedirect(redirectType,location) =>
       WebResponse.responseCode(redirectType.code)
       WebResponse.responseHeader("Location",location)
@@ -159,9 +159,13 @@ trait WebApplication extends Filter{
       showPage(notFoundPage,path)
       
     case e =>
-      println("Unknown exception in WebApplication")
-      e.printStackTrace
-      throw e
+      onError(e,path,response)
+  }
+  
+  def onError(exception:Throwable,path:String,response:Option[WebResponse]) = {
+    println("Unknown exception in WebApplication")
+    exception.printStackTrace
+    throw exception
   }
 }
 
