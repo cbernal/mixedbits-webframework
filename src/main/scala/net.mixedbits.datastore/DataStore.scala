@@ -170,11 +170,6 @@ class DataStore(schema:String,documentsTable:String){
   def collection[T <: DataObject:ClassManifest](name:String)(idExtractor: T=>T#Property[String])(registeredViews: RegisteredView[T]*) = new Collection(name,idExtractor,registeredViews)  
 }
 
-case class DataRecord(collection:String,id:String,columns:(Symbol,String)*){
-  def apply(symbol:Symbol) = columns.filter(_._1 == symbol).head._2
-  def column(symbol:Symbol) = columns.filter(_._1 == symbol).headOption.map(_._2)
-}
-
 object DataStore{
   object Listing extends DataCompanion[Listing]
   class Listing extends DataObject{
