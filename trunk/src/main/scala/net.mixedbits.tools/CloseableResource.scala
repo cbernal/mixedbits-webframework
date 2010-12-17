@@ -1,6 +1,6 @@
 package net.mixedbits.tools
 
-import Sequences._
+import scala.collection.JavaConversions._
 import java.io._
 
 class CloseableResource[T](resource: =>T)(implicit onClose: HasClose[T]){
@@ -28,13 +28,10 @@ class CloseableResource[T](resource: =>T)(implicit onClose: HasClose[T]){
 
 object CloseableResource extends CloseableResourceImports{
   private def usageTest(){
-    
     //uses the javaCloseableToCloseableResource conversion
     for(input <- use(new BufferedReader(new FileReader("/tmp/input.txt")));output <- use(new FileWriter("/tmp/output.txt")) ){
       output.write(input.readLine)
     }
-    
-    
     
     //uses the looksCloseableToCloseableResource conversion
     for(zipFile <- use(new java.util.zip.ZipFile("/tmp/bla.zip"));entry <- zipFile.entries){
@@ -57,8 +54,5 @@ object HasClose{
 }
 
 trait CloseableResourceImports{
-  
-  def use[T:HasClose](resource:T):CloseableResource[T] = 
-    new CloseableResource[T](resource)
-
+  def use[T:HasClose](resource:T):CloseableResource[T] = new CloseableResource[T](resource)
 }
