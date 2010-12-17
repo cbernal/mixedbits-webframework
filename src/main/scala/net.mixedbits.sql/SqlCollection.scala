@@ -155,7 +155,7 @@ sealed class PrimaryKey[P](val arity:Int,val primaryKeyValues: P => Seq[Any]){
             Some(index)
           else
             None
-        }.flatten.head
+        }.flatten.headOption getOrElse error("unable to find parameter name, keyIndex:"+keyIndex)
       )
     } toList
   }
