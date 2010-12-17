@@ -1,5 +1,6 @@
 package net.mixedbits.mongo
 
+import scala.collection.JavaConversions._
 import net.mixedbits.json._
 import net.mixedbits.tools._
 import com.mongodb._
