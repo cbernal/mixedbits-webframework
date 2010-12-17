@@ -55,13 +55,6 @@ object Sequences extends SequencesImports{
   }
 }
 trait SequencesImports{
-  
-  implicit def javaEnumerationToScalaIterator[A](it : java.util.Enumeration[A]) =
-    scala.collection.JavaConversions.asIterator(it)
-
-  implicit def javaIteratorToScalaIterator[A](it : java.util.Iterator[A]) =
-    scala.collection.JavaConversions.asIterator(it)
-
   implicit def sequenceExtensions[T:Manifest](value:Seq[T]) = new SequenceExtensions(value)
 }
 
@@ -167,6 +160,12 @@ object Files extends FilesImports{
 
   def findAll(dirs:Seq[File],extension:String):List[File] = 
     findAll(dirs,{f:File => f.getName endsWith extension})
+  
+  def deleteAll(file:File){
+    if(file.isDirectory)
+      Option(file.listFiles).flatten foreach deleteAll
+    file.delete
+  }
 }
 trait FilesImports{
   import java.io._
