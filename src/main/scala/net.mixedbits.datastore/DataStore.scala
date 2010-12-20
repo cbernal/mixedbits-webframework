@@ -105,6 +105,13 @@ class DataStore(schema:String,documentsTable:String){
       registeredViews foreach {_.store(this,value)}
     }
     
+    def retreive(id:String)(implicit connection:SqlConnection):Option[T] = {
+      val s = connection.rawConnection.prepareStatement("SELECT documents._collection as _collection,documents._id as _id, documents._document as _document FROM `%1$s`.`%2$s` as documents WHERE documents._collection = ? AND documents._id = ?".format(schema,documentsTable))
+      s.setString(1,name)
+      s.setString(2,id)
+      rawQuery(s).toList.headOption
+    }
+    
     def remove(id:String)(implicit connection:SqlWriteConnection){
       registeredViews foreach {_.remove(this,id)}      
       _documents.findAll where ('_collection === name and '_id === id) delete
