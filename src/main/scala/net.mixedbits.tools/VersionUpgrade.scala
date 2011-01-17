@@ -6,12 +6,16 @@ class VersionUpgrade[T](obj:T,currentVersion: => Int,updateVersion: Int => Any){
   val upgrades = new ListBuffer[(Int,()=>Any)]
   def upgradeTo(version:Int)(block: => Any) = upgrades += (version,()=>block)
   
-  def apply():T = {
-    for( (version,block) <- upgrades if version > currentVersion )
-      block()
-    
-    updateVersion(upgrades map {_._1} max)
-    
+  def apply():T = apply(x=>())
+  
+  def apply(upgradeAction: T=>Any):T = {
+    val maxVersion = upgrades.map{_._1}.max
+    if(currentVersion < maxVersion){
+      for( (version,block) <- upgrades if version > currentVersion )
+        block()
+      updateVersion(maxVersion)
+      upgradeAction(obj)
+    }
     obj
   }
 }
