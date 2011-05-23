@@ -3,6 +3,7 @@ package net.mixedbits.media
 import net.mixedbits.tools._
 import java.io._
 import scala.io._
+import sys.error
 
 case class ConversionResult(exitCode:Int,percent:Double,history:Seq[String]){
   def hadError = !hadWarning && exitCode != 0

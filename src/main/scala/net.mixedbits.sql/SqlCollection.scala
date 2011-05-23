@@ -2,6 +2,7 @@ package net.mixedbits.sql
 
 import java.lang.reflect.{Array => _,_}
 import java.util.Date
+import sys.error
 
 //reflection
 

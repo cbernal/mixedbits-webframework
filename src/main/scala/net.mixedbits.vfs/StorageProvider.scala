@@ -1,6 +1,7 @@
 package net.mixedbits.vfs
 
 import java.io._
+import sys.error
 
 trait StorageProvider{
   def path(rawPath:String,relativePath:String,vfs:VirtualFileSystem):Path

@@ -1,5 +1,6 @@
 package net.mixedbits.vfs
 
+import sys.error
 import java.io._
 import net.mixedbits.tools._
 

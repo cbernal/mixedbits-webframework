@@ -1,7 +1,5 @@
 package net.mixedbits.tools
 
-import scala.collection.mutable.ListBuffer
-
 class SimpleEvent{
   private val funcs = new ListBuffer[()=>Any]
   def += (func: =>Any) = {

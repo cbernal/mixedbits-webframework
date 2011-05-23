@@ -2,6 +2,7 @@ package net.mixedbits.config
 
 import java.io._
 import java.util._
+import sys.error
 
 import net.mixedbits.tools._
 

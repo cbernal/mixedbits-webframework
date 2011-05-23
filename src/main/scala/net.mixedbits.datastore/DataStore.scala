@@ -3,6 +3,7 @@ package net.mixedbits.datastore
 import net.mixedbits.tools._
 import net.mixedbits.sql._
 import java.sql._
+import sys.error
 
 class DataStore(schema:String,documentsTable:String){
   datastore =>
