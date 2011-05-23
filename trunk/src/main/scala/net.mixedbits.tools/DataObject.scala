@@ -3,6 +3,7 @@ package net.mixedbits.tools
 import org.bson._
 import org.bson.types.BasicBSONList
 import scala.collection.JavaConversions._
+import sys.error
 
 /*
 Data Structure:

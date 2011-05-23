@@ -1,6 +1,7 @@
 package net.mixedbits.tools
 
 import java.lang.reflect.{Array => ReflectionArray,_}
+import sys.error
 
 trait EagerObjects{
   self =>

@@ -1,5 +1,6 @@
 package net.mixedbits.mongo
 
+import sys.error
 import net.mixedbits.tools._
 import net.mixedbits.json._
 import net.mixedbits.tools._

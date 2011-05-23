@@ -1,5 +1,6 @@
 package net.mixedbits.tools
 
+import sys.error
 import scala.util._
 import BlockStatements._
 

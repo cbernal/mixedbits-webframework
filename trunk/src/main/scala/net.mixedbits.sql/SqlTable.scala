@@ -1,6 +1,7 @@
 package net.mixedbits.sql
 
 import java.sql._
+import sys.error
 
 case class SqlTable(name:String,primaryKey:String*)(val columns:SqlColumn*){
   lazy val autoIncrementColumnCount = columns.filter{_.columnType == SqlAutoIncrementColumn}.size

@@ -1,5 +1,7 @@
 package net.mixedbits.vfs
 
+import sys.error
+
 class VirtualFileSystem(_storageProviders:(String,StorageProvider)*){
   //store the providers list in order from longest to shortest prefix
   val providers = _storageProviders map {case (path,provider) => (normalize(path),provider)} sortBy {-_._1.length}

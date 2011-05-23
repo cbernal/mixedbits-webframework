@@ -1,5 +1,6 @@
 package net.mixedbits.xmlstore
 
+import sys.error
 import net.mixedbits.tools._
 import net.mixedbits.xmlstore.schema._
 import net.mixedbits.sql._

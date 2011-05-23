@@ -4,6 +4,8 @@ import Numbers._
 import Strings._
 import Objects._
 
+import sys.error
+
 import java.io._
 import java.net.URLEncoder.encode
 

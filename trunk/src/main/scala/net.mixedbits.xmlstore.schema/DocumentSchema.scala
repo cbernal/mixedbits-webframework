@@ -1,6 +1,7 @@
 package net.mixedbits.xmlstore.schema
 
 import scala.xml._
+import sys.error
 
 case class DocumentSchema(name:String,version:String,views:Seq[DocumentView],collections:Seq[DocumentCollection])
 

@@ -73,9 +73,8 @@ trait SimpleBinaryResponse extends WebResponse{
         
         outputStream.write(buffer,0,count)
       }
-    }
-    finally{
-      outputStream.close()
+    } finally {
+      try{ outputStream.close() } catch { case e => () }
     }
   }
   

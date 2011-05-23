@@ -31,7 +31,6 @@ class XStreamListConverter( _mapper : Mapper ) extends AbstractCollectionConvert
   }
 }
 
-import scala.collection.mutable.ListBuffer
 class XStreamSeqConverter[T <: Seq[Any]](fromSeq: Seq[Any] => T)(implicit manifest:ClassManifest[T],_mapper:Mapper) extends AbstractCollectionConverter(_mapper) {
   val seqClass = manifest.erasure
   def canConvert( clazz: Class[_]) = {

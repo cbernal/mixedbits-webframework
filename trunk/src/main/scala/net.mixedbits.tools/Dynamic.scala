@@ -1,5 +1,7 @@
 package net.mixedbits.tools
 
+import sys.error
+
 class Dynamic private(val dynamicTarget:AnyRef,name:String = null){
   import java.lang.reflect.{Array=>_,_}
   

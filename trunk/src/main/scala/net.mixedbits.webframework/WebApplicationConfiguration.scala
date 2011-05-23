@@ -3,6 +3,7 @@ package net.mixedbits.webframework
 import java.io._
 import java.util.Properties
 import net.mixedbits.tools._
+import sys.error
 
 abstract class WebApplicationConfigurationLoader{
   self:WebApplicationLog =>

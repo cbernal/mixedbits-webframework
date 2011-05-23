@@ -3,6 +3,7 @@ package net.mixedbits.mongo
 import net.mixedbits.json._
 import net.mixedbits.tools._
 import java.util.Date
+import sys.error
 
 import org.scala_tools.time._
 import org.scala_tools.time.Imports._
