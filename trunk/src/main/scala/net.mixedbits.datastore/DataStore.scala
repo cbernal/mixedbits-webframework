@@ -124,14 +124,7 @@ class DataStore(schema:String,documentsTable:String){
       connection.runOnClose{ results.close() }
       
       def hasNext = results.next()
-      def next = {
-        val blob = results.getBlob("_document")
-        val stream = blob.getBinaryStream
-        val result = DataObject.load[T,org.bson.BSONObject](org.bson.BSON.decode(IO.readAllBytes(stream)))
-        stream.close()
-        blob.free()
-        result
-      }
+      def next = DataObject.load[T,org.bson.BSONObject](org.bson.BSON.decode(results.getBytes("_document")))
     }
     def findAll(viewQueries:ViewQuery*)(implicit connection:SqlConnection):Iterator[T] = {
       
