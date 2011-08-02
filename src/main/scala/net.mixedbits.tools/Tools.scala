@@ -508,6 +508,12 @@ trait IOImports{
     }
   }
   
+  def readAllBytes(inputStream:InputStream):Array[Byte] = {
+    val outputStream = new ByteArrayOutputStream
+    pipeStream(inputStream,outputStream)
+    outputStream.toByteArray()    
+  }
+  
   def readAllText(inputStream:InputStream,encoding:String = IO.defaultTextEncoding):String = {
     val outputStream = new ByteArrayOutputStream
     pipeStream(inputStream,outputStream)
